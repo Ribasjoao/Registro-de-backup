@@ -44,12 +44,14 @@ import {
   query, 
   orderBy, 
   where,
+  limit,
   addDoc, 
   updateDoc, 
   deleteDoc, 
   doc, 
   setDoc, 
   getDoc,
+  getIdTokenResult,
   handleFirestoreError,
   OperationType,
   User
@@ -58,8 +60,6 @@ import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } f
 import { awardXP } from './lib/xpService';
 
 type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'gamification' | 'settings';
-
-const ADMIN_EMAIL = "joaoribasdossantos@gmail.com";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -132,16 +132,25 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Check for custom claims (RBAC)
+        const tokenResult = await getIdTokenResult(currentUser);
+        const roleFromClaim = tokenResult.claims.role as string || 'viewer';
+        const isAdminUser = roleFromClaim === 'admin';
+        const isEditorUser = roleFromClaim === 'editor' || isAdminUser;
+
+        setIsAdmin(isAdminUser);
+        setIsEditor(isEditorUser);
+
         // Sync user profile to Firestore
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userRef);
           
-          let role = 'viewer';
-          if (currentUser.email === ADMIN_EMAIL) {
-            role = 'admin';
-          } else if (userSnap.exists()) {
-            role = userSnap.data().role || 'viewer';
+          let role = roleFromClaim;
+          if (userSnap.exists()) {
+            // If the document has a different role, we might want to sync it, 
+            // but the claim is the source of truth for security rules.
+            role = userSnap.data().role || role;
           }
 
           const userData = {
@@ -160,8 +169,8 @@ export default function App() {
             });
             setAppUser({ id: currentUser.uid, ...userData, xp: 0, level: 'Padawan do Backup' } as AppUser);
           } else {
-            if (currentUser.email === ADMIN_EMAIL && userSnap.data().role !== 'admin') {
-              // Ensure the hardcoded admin email always has admin role in Firestore
+            if (roleFromClaim === 'admin' && userSnap.data().role !== 'admin') {
+              // Ensure the admin claim always has admin role in Firestore
               await updateDoc(userRef, { role: 'admin', displayName: currentUser.displayName, photoURL: currentUser.photoURL });
               role = 'admin';
             } else {
@@ -175,15 +184,14 @@ export default function App() {
           setIsEditor(role === 'admin' || role === 'editor');
         } catch (error) {
           console.error('Error syncing user profile:', error);
-          // Fallback to email check if Firestore fails
-          const adminStatus = currentUser.email === ADMIN_EMAIL;
-          setIsAdmin(adminStatus);
-          setIsEditor(adminStatus);
+          // Fallback to claims if Firestore fails
+          setIsAdmin(isAdminUser);
+          setIsEditor(isEditorUser);
           setAppUser({
             id: currentUser.uid,
             uid: currentUser.uid,
             email: currentUser.email || '',
-            role: adminStatus ? 'admin' : 'viewer',
+            role: roleFromClaim as 'admin' | 'editor' | 'viewer',
             displayName: currentUser.displayName || undefined,
             photoURL: currentUser.photoURL || undefined
           });
@@ -210,7 +218,7 @@ export default function App() {
     });
 
     // Listen to Backups
-    const qBackups = query(collection(db, 'backups'), orderBy('timestamp', 'desc'));
+    const qBackups = query(collection(db, 'backups'), orderBy('timestamp', 'desc'), limit(100));
     const unsubscribeBackups = onSnapshot(qBackups, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BackupRecord));
       setBackups(data);
@@ -242,30 +250,8 @@ export default function App() {
     const unsubscribeTasks = onSnapshot(qTasks, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
       
-      // Robust client-side sorting
-      data.sort((a, b) => {
-        const parseDate = (dateStr: string) => {
-          if (!dateStr) return 0;
-          // Try parsing ISO string
-          let date = new Date(dateStr);
-          if (!isNaN(date.getTime())) return date.getTime();
-          
-          // Fallback for pt-BR format "DD/MM/YYYY HH:mm:ss"
-          const parts = dateStr.split(/[\/\s:]/);
-          if (parts.length >= 3) {
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const year = parseInt(parts[2], 10);
-            const hour = parts[3] ? parseInt(parts[3], 10) : 0;
-            const min = parts[4] ? parseInt(parts[4], 10) : 0;
-            const sec = parts[5] ? parseInt(parts[5], 10) : 0;
-            date = new Date(year, month, day, hour, min, sec);
-            if (!isNaN(date.getTime())) return date.getTime();
-          }
-          return 0;
-        };
-        return parseDate(b.createdAt) - parseDate(a.createdAt);
-      });
+      // Radical simplification of client-side sorting using ISO 8601 strings
+      data.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
       
       setTasks(data);
     }, (error) => {
@@ -296,7 +282,7 @@ export default function App() {
     try {
       await addDoc(collection(db, 'clients'), {
         name,
-        createdAt: new Date().toLocaleDateString('pt-BR'),
+        createdAt: new Date().toISOString(),
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'clients');

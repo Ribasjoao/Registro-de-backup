@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, getIdTokenResult } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Import the Firebase configuration
 import firebaseConfig from '../firebase-applet-config.json';
@@ -9,6 +10,7 @@ import firebaseConfig from '../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Operations types for error handling
@@ -79,6 +81,7 @@ export {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged, 
+  getIdTokenResult,
   doc, 
   getDoc, 
   setDoc, 
@@ -87,8 +90,10 @@ export {
   query, 
   orderBy, 
   where,
+  limit,
   addDoc, 
   updateDoc, 
-  deleteDoc 
+  deleteDoc,
+  httpsCallable
 };
 export type { User };

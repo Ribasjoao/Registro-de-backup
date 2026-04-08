@@ -36,7 +36,7 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setActionPlan(initialData.actionPlan || '');
       setStatus(initialData.status || 'success');
       setSize(initialData.size || '');
-      setTimestamp(initialData.timestamp || new Date().toLocaleString('pt-BR'));
+      setTimestamp(initialData.timestamp || new Date().toISOString());
     } else {
       setTitle('');
       setClient('');
@@ -46,7 +46,7 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setActionPlan('');
       setStatus('success');
       setSize('');
-      setTimestamp(new Date().toLocaleString('pt-BR'));
+      setTimestamp(new Date().toISOString());
     }
   }, [initialData, isOpen]);
 
@@ -209,7 +209,7 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
             </label>
             <input
               type="text"
-              value={timestamp}
+              value={new Date(timestamp).toLocaleString('pt-BR')}
               className="w-full h-10 px-3 rounded-lg border border-border-main bg-bg-main text-text-main text-sm outline-none cursor-not-allowed"
               readOnly
             />
