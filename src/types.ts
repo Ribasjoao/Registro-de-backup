@@ -56,6 +56,7 @@ export interface Task {
   tags?: string[];
   status: 'inbox' | 'doing' | 'done';
   duration?: number; // in minutes
+  isGolden?: boolean;
 }
 
 export type RepositoryType = 'Cloud' | 'On-Premise' | 'Remote';

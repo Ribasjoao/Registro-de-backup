@@ -414,7 +414,29 @@ export default function App() {
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
+      const task = tasks.find(t => t.id === id);
+      const wasDone = task?.status === 'done';
+      const isDoneNow = updates.status === 'done' || updates.completed === true;
+
       await updateDoc(doc(db, 'tasks', id), updates);
+
+      // XP Gamification for Tasks
+      if (user && task && !wasDone && isDoneNow) {
+        let xpAmount = task.important ? 25 : 10;
+        let reasons = [task.important ? 'Tarefa Importante concluída' : 'Tarefa concluída'];
+
+        if (task.duration && task.duration > 60) {
+          xpAmount += 15;
+          reasons.push('Bônus de Longa Duração (>60min)');
+        }
+
+        if (task.isGolden) {
+          xpAmount += 50;
+          reasons.push('Bônus de TAREFA DE OURO');
+        }
+
+        await awardXP(user.uid, xpAmount, reasons.join(' + '));
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
@@ -422,10 +444,31 @@ export default function App() {
 
   const toggleTask = async (id: string, completed: boolean) => {
     try {
+      const task = tasks.find(t => t.id === id);
+      const wasDone = task?.completed;
+
       await updateDoc(doc(db, 'tasks', id), { 
         completed,
         status: completed ? 'done' : 'doing'
       });
+
+      // XP Gamification for Tasks
+      if (user && task && !wasDone && completed) {
+        let xpAmount = task.important ? 25 : 10;
+        let reasons = [task.important ? 'Tarefa Importante concluída' : 'Tarefa concluída'];
+
+        if (task.duration && task.duration > 60) {
+          xpAmount += 15;
+          reasons.push('Bônus de Longa Duração (>60min)');
+        }
+
+        if (task.isGolden) {
+          xpAmount += 50;
+          reasons.push('Bônus de TAREFA DE OURO');
+        }
+
+        await awardXP(user.uid, xpAmount, reasons.join(' + '));
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
