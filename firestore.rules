@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: backups
+    // Fields:
+    //   - client: string (required)
+    //   - title: string (required)
+    //   - status: string (required, enum: ["success", "warning", "failed"])
+    //   - category: string (required)
+    //   - timestamp: string (required)
+    //   - responsible: string (required)
+    //   - size: string (optional)
+    //   - technicalAnalysis: string (optional)
+    //   - actionPlan: string (optional)
+    //   - backupType: string (optional)
+    //
+    // Collection: backup_types
+    // Fields:
+    //   - name: string (required)
+    //
+    // Collection: clients
+    // Fields:
+    //   - name: string (required)
+    //
+    // Collection: destinations
+    // Fields:
+    //   - name: string (required)
+    //   - client: string (required)
+    //   - freeSpaceTB: number (required)
+    //   - usedSpaceTB: number (required)
+    //   - totalSpaceTB: number (required)
+    //   - savingsPercent: number (required)
+    //   - savingsTB: number (required)
+    //   - backupsCount: number (required)
+    //   - location: string (required, enum: ["Local", "S3", "Cloud"])
+    //
+    // Collection: users
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - role: string (required, enum: ["admin", "viewer"])
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "joaoribasdossantos@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isEditor() {
+      return isAuthenticated() && (
+        isAdmin() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'editor')
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidBackup(data) {
+      return hasOnlyAllowedFields(['client', 'node', 'title', 'status', 'category', 'timestamp', 'responsible', 'size', 'technicalAnalysis', 'actionPlan', 'backupType']) &&
+             data.client is string && data.client.size() > 0 && data.client.size() < 100 &&
+             (!('node' in data) || data.node == null || (data.node is string && data.node.size() < 100)) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.status in ["success", "warning", "failed"] &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50 &&
+             data.responsible is string && data.responsible.size() > 0 && data.responsible.size() < 100 &&
+             (!('size' in data) || data.size == null || (data.size is string && data.size.size() < 50)) &&
+             (!('technicalAnalysis' in data) || data.technicalAnalysis == null || (data.technicalAnalysis is string && data.technicalAnalysis.size() < 5000)) &&
+             (!('actionPlan' in data) || data.actionPlan == null || (data.actionPlan is string && data.actionPlan.size() < 5000)) &&
+             (!('backupType' in data) || data.backupType == null || (data.backupType is string && data.backupType.size() < 100));
+    }
+
+    function isValidClient(data) {
+      return hasOnlyAllowedFields(['name', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.createdAt is string && data.createdAt.size() > 0 && data.createdAt.size() < 50;
+    }
+
+    function isValidDestination(data) {
+      return hasOnlyAllowedFields(['name', 'client', 'freeSpaceTB', 'usedSpaceTB', 'totalSpaceTB', 'savingsPercent', 'savingsTB', 'backupsCount', 'location']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.client is string && data.client.size() > 0 && data.client.size() < 100 &&
+             data.freeSpaceTB is number && data.freeSpaceTB >= 0 &&
+             data.usedSpaceTB is number && data.usedSpaceTB >= 0 &&
+             data.totalSpaceTB is number && data.totalSpaceTB >= 0 &&
+             data.savingsPercent is number && data.savingsPercent >= 0 && data.savingsPercent <= 100 &&
+             data.savingsTB is number && data.savingsTB >= 0 &&
+             data.backupsCount is number && data.backupsCount >= 0 &&
+             data.location in ["Local", "S3", "Cloud"];
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'role', 'xp', 'level', 'displayName', 'photoURL']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 50 &&
+             data.email is string && data.email.size() > 0 && data.email.size() < 150 &&
+             data.role in ["admin", "editor", "viewer"] &&
+             (!('xp' in data) || (data.xp is number && data.xp >= 0)) &&
+             (!('level' in data) || (data.level is string && data.level.size() < 100)) &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() < 500));
+    }
+
+    function isValidXPHistory(data) {
+      return hasOnlyAllowedFields(['userId', 'amount', 'reason', 'timestamp']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 50 &&
+             data.amount is number && data.amount >= -100 && data.amount <= 100 &&
+             data.reason is string && data.reason.size() > 0 && data.reason.size() < 200 &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50;
+    }
+
+    function isValidBackupType(data) {
+      return hasOnlyAllowedFields(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidTask(data) {
+      return hasOnlyAllowedFields(['title', 'completed', 'createdAt', 'userId', 'dueDate', 'important', 'tags', 'status', 'duration']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.completed is bool &&
+             data.createdAt is string &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.status in ["inbox", "doing", "done"] &&
+             (!('dueDate' in data) || data.dueDate == null || data.dueDate is string) &&
+             (!('important' in data) || data.important == null || data.important is bool) &&
+             (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() <= 10)) &&
+             (!('duration' in data) || data.duration == null || data.duration is number);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /backups/{backupId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isEditor() && isValidBackup(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidClient(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /destinations/{destinationId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isEditor() && isValidDestination(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Allow reading all users for leaderboard
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'viewer' || isAdmin());
+      // Allow users to update their own profile (xp, level, etc) but NOT their role, uid, or email unless admin
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+        isAdmin() || 
+        (isOwner(userId) && 
+         request.resource.data.role == resource.data.role &&
+         request.resource.data.uid == resource.data.uid &&
+         request.resource.data.email == resource.data.email &&
+         (!('xp' in request.resource.data) || 
+          (!('xp' in resource.data) && request.resource.data.xp <= 100) || 
+          ('xp' in resource.data && request.resource.data.xp - resource.data.xp <= 100 && request.resource.data.xp - resource.data.xp >= -100)))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /xp_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidXPHistory(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /backup_types/{typeId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidBackupType(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

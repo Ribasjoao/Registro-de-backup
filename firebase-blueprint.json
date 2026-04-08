@@ -1,0 +1,138 @@
+{
+  "entities": {
+    "backup": {
+      "title": "Backup Record",
+      "description": "A record of a backup operation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "client": { "type": "string" },
+        "node": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["success", "warning", "failed"] },
+        "category": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "responsible": { "type": "string" },
+        "size": { "type": "string" },
+        "technicalAnalysis": { "type": "string" },
+        "actionPlan": { "type": "string" },
+        "backupType": { "type": "string" }
+      },
+      "required": ["client", "title", "status", "category", "timestamp", "responsible"]
+    },
+    "backup_type": {
+      "title": "Backup Type",
+      "description": "A type of backup (e.g., Local, Cloud).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "client": {
+      "title": "Client",
+      "description": "A client whose backups are managed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "destination": {
+      "title": "Storage Destination",
+      "description": "A destination where backups are stored.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "client": { "type": "string" },
+        "freeSpaceTB": { "type": "number" },
+        "usedSpaceTB": { "type": "number" },
+        "totalSpaceTB": { "type": "number" },
+        "backupsCount": { "type": "number" },
+        "savingsPercent": { "type": "number" },
+        "savingsTB": { "type": "number" },
+        "location": { "type": "string", "enum": ["Local", "S3", "Cloud"] }
+      },
+      "required": ["name", "client", "freeSpaceTB", "usedSpaceTB", "totalSpaceTB", "backupsCount", "savingsPercent", "savingsTB", "location"]
+    },
+    "user": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "editor", "viewer"] },
+        "xp": { "type": "number" },
+        "level": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "xp_history": {
+      "title": "XP History",
+      "description": "A record of XP gained or lost by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["userId", "amount", "reason", "timestamp"]
+    },
+    "task": {
+      "title": "Task",
+      "description": "A task in the to-do list.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "important": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["inbox", "doing", "done"] },
+        "duration": { "type": "number" }
+      },
+      "required": ["title", "completed", "createdAt", "userId", "status"]
+    }
+  },
+  "firestore": {
+    "/backups/{backupId}": {
+      "schema": "backup",
+      "description": "Collection of backup records."
+    },
+    "/clients/{clientId}": {
+      "schema": "client",
+      "description": "Collection of clients."
+    },
+    "/destinations/{destinationId}": {
+      "schema": "destination",
+      "description": "Collection of storage destinations."
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Collection of user profiles and roles."
+    },
+    "/xp_history/{historyId}": {
+      "schema": "xp_history",
+      "description": "Collection of XP history records."
+    },
+    "/backup_types/{typeId}": {
+      "schema": "backup_type",
+      "description": "Collection of backup types (Local, Cloud, etc.)."
+    },
+    "/tasks/{taskId}": {
+      "schema": "task",
+      "description": "Collection of tasks for the to-do list."
+    }
+  }
+}

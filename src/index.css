@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-bg-main: var(--color-bg-main);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  
+  --color-text-main: var(--color-text-main);
+  --color-text-secondary: var(--color-text-secondary);
+  
+  --color-border-main: var(--color-border-main);
+  --color-border-card: var(--color-border-card);
+  
+  --color-brand: var(--color-brand);
+  --color-brand-light: var(--color-brand-light);
+  --color-brand-dark: var(--color-brand-dark);
+  
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+}
+
+@layer base {
+  :root {
+    --color-bg-main: #F3F4F6;
+    --color-bg-card: #FFFFFF;
+    --color-bg-sidebar: #FFFFFF;
+    
+    --color-text-main: #1F2937;
+    --color-text-secondary: #6B7280;
+    
+    --color-border-main: #E5E7EB;
+    --color-border-card: transparent;
+    
+    --color-brand: #6d28d9;
+    --color-brand-light: #f5f3ff;
+    --color-brand-dark: #4c1d95;
+    
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    
+    --shadow-card: 0 4px 6px rgba(0,0,0,0.05);
+  }
+
+  .dark {
+    --color-bg-main: #111827;
+    --color-bg-card: #1F2937;
+    --color-bg-sidebar: #111827;
+    
+    --color-text-main: #F9FAFB;
+    --color-text-secondary: #9CA3AF;
+    
+    --color-border-main: #374151;
+    --color-border-card: #374151;
+    
+    --color-brand: #8b5cf6;
+    --color-brand-light: #2e1065;
+    --color-brand-dark: #a78bfa;
+    
+    --color-success: #34d399;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    
+    --shadow-card: none;
+  }
+
+  body {
+    @apply bg-bg-main text-text-main font-sans transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-card rounded-xl p-6 transition-all duration-200;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border-card);
+  }
+  
+  .sidebar {
+    @apply bg-bg-sidebar border-r border-border-main transition-colors duration-200;
+  }
+}
+
+/* Presentation Mode Styles */
+.presentation-mode {
+  --color-bg-main: #020617; /* Slate 950 */
+  --color-bg-card: #0f172a; /* Slate 900 */
+  --color-border-main: #1e293b; /* Slate 800 */
+  --color-text-main: #f8fafc; /* Slate 50 */
+  --color-text-secondary: #94a3b8; /* Slate 400 */
+}
+
+.presentation-mode main {
+  @apply bg-slate-950;
+}
+
+.presentation-mode .max-w-none {
+  @apply h-full flex flex-col justify-center p-12 lg:p-20;
+}
+
+/* KPI Scaling */
+.presentation-mode .card {
+  @apply border-slate-800 bg-slate-900/40 backdrop-blur-xl shadow-2xl rounded-3xl p-10 h-auto min-h-[220px] flex flex-col justify-center;
+}
+
+.presentation-mode .font-heading.text-3xl {
+  @apply text-7xl lg:text-8xl xl:text-9xl tracking-tighter mb-2;
+}
+
+.presentation-mode .text-sm.font-medium.text-text-secondary {
+  @apply text-2xl lg:text-3xl mb-4;
+}
+
+.presentation-mode .w-5.h-5 {
+  @apply w-10 h-10; /* Scale icons */
+}
+
+/* Layout adjustments */
+.presentation-mode .grid-cols-1.md-grid-cols-3 {
+  @apply grid-cols-3 gap-12 mb-16;
+}
+
+.presentation-mode .lg-col-span-1 {
+  @apply col-span-1 flex flex-col justify-center;
+}
+
+.presentation-mode .lg-col-span-2 {
+  @apply col-span-2;
+}
+
+/* Chart Scaling */
+.presentation-mode .min-h-\[200px\] {
+  @apply min-h-[450px];
+}
+
+.presentation-mode .text-2xl.font-bold {
+  @apply text-5xl;
+}
+
+.presentation-mode .text-xs.text-text-secondary {
+  @apply text-lg;
+}
+
+.presentation-mode .mt-6.space-y-3 {
+  @apply space-y-6 mt-10;
+}
+
+.presentation-mode .mt-6.space-y-3 .text-sm {
+  @apply text-2xl;
+}
+
+.presentation-mode .mt-6.space-y-3 .w-3.h-3 {
+  @apply w-5 h-5;
+}
+
+/* Table Scaling */
+.presentation-mode table {
+  @apply text-xl;
+}
+
+.presentation-mode th {
+  @apply py-6 px-8 text-lg;
+}
+
+.presentation-mode td {
+  @apply py-8 px-8;
+}
+
+.presentation-mode .max-w-\[200px\] {
+  @apply max-w-none;
+}
+
+.presentation-mode .p-6.border-b {
+  @apply p-10;
+}
+
+.presentation-mode .text-lg.font-bold {
+  @apply text-4xl mb-6;
+}
+
+.presentation-mode .text-sm.font-medium.text-brand {
+  @apply text-xl;
+}
+
+/* Presentation Carousel Styles */
+#presentation-carousel {
+  @apply fixed inset-0 z-[100] bg-slate-950 flex flex-col overflow-hidden;
+}
+
+.presentation-slide {
+  @apply absolute inset-0 flex flex-col items-center justify-center p-20 text-white;
+}
+
+.presentation-kpi-value {
+  @apply text-[120px] lg:text-[140px] font-heading font-black leading-none tracking-tighter;
+}
+
+.presentation-kpi-label {
+  @apply text-3xl lg:text-4xl font-medium text-slate-400 mt-4;
+}
+
+
