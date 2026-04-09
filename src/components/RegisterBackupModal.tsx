@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from './UI';
-import { AlertCircle, CheckCircle2, FileText, ClipboardList, User, Calendar as CalendarIcon, Building2, Database } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, ClipboardList, User, Calendar as CalendarIcon, Building2, Database, Sparkles, Loader2 } from 'lucide-react';
 import { Client, BackupRecord, BackupStatus, BackupType } from '../types';
+import { analyzeBackupLog } from '../services/geminiService';
 
 interface RegisterBackupModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
   const [status, setStatus] = useState<BackupStatus>('success');
   const [timestamp, setTimestamp] = useState('');
   const [error, setError] = useState('');
+  const [rawLog, setRawLog] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -33,6 +36,7 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setActionPlan(initialData.actionPlan || '');
       setStatus(initialData.status || 'success');
       setTimestamp(initialData.timestamp || new Date().toISOString());
+      setRawLog('');
     } else {
       setTitle('');
       setClient('');
@@ -41,8 +45,34 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setActionPlan('');
       setStatus('success');
       setTimestamp(new Date().toISOString());
+      setRawLog('');
     }
   }, [initialData, isOpen]);
+
+  const handleAIAnalysis = async () => {
+    if (!rawLog.trim()) {
+      setError('Por favor, cole o log de erro para analisar.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setError('');
+
+    try {
+      const result = await analyzeBackupLog(rawLog, client);
+      
+      if (typeof result === 'string') {
+        setError(result);
+      } else {
+        setTechnicalAnalysis(result.technicalAnalysis);
+        setActionPlan(result.actionPlan);
+      }
+    } catch (err: any) {
+      setError('Falha ao conectar com o serviço de IA.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleSave = () => {
     if (!title || !client) {
@@ -207,6 +237,42 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
             ))}
           </div>
         </div>
+
+        {/* AI Analysis Section */}
+        {(status === 'failed' || status === 'warning') && (
+          <div className="space-y-3 p-4 bg-bg-main rounded-xl border border-border-main animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
+                <Sparkles className="w-4 h-4 text-brand" />
+                Log Bruto do Erro (IA)
+              </label>
+              <button
+                onClick={handleAIAnalysis}
+                disabled={isAnalyzing || !rawLog.trim()}
+                className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 text-brand hover:bg-brand/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-bold transition-all"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Analisar com IA
+                  </>
+                )}
+              </button>
+            </div>
+            <textarea
+              rows={3}
+              value={rawLog}
+              onChange={(e) => setRawLog(e.target.value)}
+              placeholder="Cole aqui o log de erro do Nakivo para diagnóstico automático..."
+              className="w-full p-3 rounded-lg border border-border-main bg-bg-card text-text-main text-xs font-mono focus:ring-2 focus:ring-brand focus:border-brand outline-none resize-none transition-all"
+            />
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-6 border-t border-border-main">
           <button
