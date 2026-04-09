@@ -23,14 +23,12 @@ export interface BackupRecord {
   id: string;
   status: BackupStatus;
   client: string;
-  node?: string;
   category: string;
   title: string;
   technicalAnalysis?: string;
   actionPlan?: string;
   timestamp: string;
   responsible: string;
-  size?: string;
   backupType?: string; // New field for Local/Cloud/etc.
 }
 

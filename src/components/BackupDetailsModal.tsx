@@ -63,18 +63,6 @@ export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsMod
                   <p className="text-sm font-semibold text-text-main">{backup.responsible}</p>
                 </div>
               </div>
-
-              {backup.node && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-bg-main rounded-lg text-text-secondary">
-                    <Database className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Node / Servidor</p>
-                    <p className="text-sm font-semibold text-text-main">{backup.node}</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
@@ -92,16 +80,6 @@ export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsMod
                   )}>
                     {backup.backupType || 'Não informado'}
                   </span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-bg-main rounded-lg text-text-secondary">
-                  <HardDrive className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Tamanho</p>
-                  <p className="text-sm font-semibold text-text-main">{backup.size || 'Não informado'}</p>
                 </div>
               </div>
 

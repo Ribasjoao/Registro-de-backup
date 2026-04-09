@@ -59,7 +59,6 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
       'Data da Auditoria',
       'Responsável',
       'Tipo de Backup',
-      'Tamanho',
       'Análise Técnica',
       'Plano de Ação'
     ];
@@ -79,7 +78,6 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
       escapeCSV(backup.timestamp),
       escapeCSV(backup.responsible),
       escapeCSV(backup.backupType || ''),
-      escapeCSV(backup.size || ''),
       escapeCSV(backup.technicalAnalysis || ''),
       escapeCSV(backup.actionPlan || '')
     ].join(';'));

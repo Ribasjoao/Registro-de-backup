@@ -17,12 +17,10 @@ interface RegisterBackupModalProps {
 export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onSave, isSaving, initialData, defaultResponsible }: RegisterBackupModalProps) {
   const [title, setTitle] = useState('');
   const [client, setClient] = useState('');
-  const [node, setNode] = useState('');
   const [backupType, setBackupType] = useState('');
   const [technicalAnalysis, setTechnicalAnalysis] = useState('');
   const [actionPlan, setActionPlan] = useState('');
   const [status, setStatus] = useState<BackupStatus>('success');
-  const [size, setSize] = useState('');
   const [timestamp, setTimestamp] = useState('');
   const [error, setError] = useState('');
 
@@ -30,22 +28,18 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
     if (initialData) {
       setTitle(initialData.title || '');
       setClient(initialData.client || '');
-      setNode(initialData.node || '');
       setBackupType(initialData.backupType || '');
       setTechnicalAnalysis(initialData.technicalAnalysis || '');
       setActionPlan(initialData.actionPlan || '');
       setStatus(initialData.status || 'success');
-      setSize(initialData.size || '');
       setTimestamp(initialData.timestamp || new Date().toISOString());
     } else {
       setTitle('');
       setClient('');
-      setNode('');
       setBackupType('');
       setTechnicalAnalysis('');
       setActionPlan('');
       setStatus('success');
-      setSize('');
       setTimestamp(new Date().toISOString());
     }
   }, [initialData, isOpen]);
@@ -60,12 +54,10 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       ...(initialData && { id: initialData.id }),
       title,
       client,
-      node,
       backupType,
       technicalAnalysis,
       actionPlan,
       status,
-      size,
       timestamp,
       responsible: initialData?.responsible || defaultResponsible || 'João Santos',
       category: initialData?.category || 'Rotina',
@@ -105,21 +97,6 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
             </select>
           </div>
 
-          {/* Node / Servidor */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
-              <Database className="w-4 h-4 text-muted" />
-              Node / Servidor
-            </label>
-            <input
-              type="text"
-              value={node}
-              onChange={(e) => setNode(e.target.value)}
-              placeholder="Ex: SRV-APP-01"
-              className="w-full h-10 px-3 rounded-lg border border-border-main bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-            />
-          </div>
-
           {/* Título */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
@@ -132,21 +109,6 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Validação Diária"
               className={`w-full h-10 px-3 rounded-lg border ${error && !title ? 'border-danger' : 'border-border-main'} bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all`}
-            />
-          </div>
-
-          {/* Tamanho */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
-              <FileText className="w-4 h-4 text-muted" />
-              Tamanho (Opcional)
-            </label>
-            <input
-              type="text"
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              placeholder="Ex: 10 GB, 500 MB"
-              className="w-full h-10 px-3 rounded-lg border border-border-main bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
             />
           </div>
 

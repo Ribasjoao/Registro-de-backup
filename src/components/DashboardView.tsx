@@ -17,26 +17,6 @@ export function DashboardView({ backups }: DashboardViewProps) {
 
   const successRate = totalBackups > 0 ? Math.round((successCount / totalBackups) * 100) : 0;
   
-  const parseSize = (sizeStr?: string): number => {
-    if (!sizeStr) return 0;
-    const match = sizeStr.match(/^([\d.]+)\s*(GB|MB|TB|KB)$/i);
-    if (!match) return 0;
-    const value = parseFloat(match[1]);
-    const unit = match[2].toUpperCase();
-    switch (unit) {
-      case 'KB': return value / (1024 * 1024);
-      case 'MB': return value / 1024;
-      case 'GB': return value;
-      case 'TB': return value * 1024;
-      default: return 0;
-    }
-  };
-
-  const totalStorageGB = backups.reduce((acc, b) => acc + parseSize(b.size), 0);
-  const displayStorage = totalStorageGB >= 1024 
-    ? `${(totalStorageGB / 1024).toFixed(2)} TB` 
-    : `${totalStorageGB.toFixed(2)} GB`;
-
   const chartData = [
     { name: 'Sucesso', value: successCount, color: '#10B981' },
     { name: 'Aviso', value: warningCount, color: '#F59E0B' },
@@ -48,7 +28,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-6 flex flex-col justify-between h-[140px]">
           <div className="flex justify-between items-start">
             <span className="text-sm font-medium text-text-secondary">Saúde Geral</span>
@@ -62,17 +42,6 @@ export function DashboardView({ backups }: DashboardViewProps) {
                 Estável
               </span>
             )}
-          </div>
-        </div>
-
-        <div className="card p-6 flex flex-col justify-between h-[140px]">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-text-secondary">Armazenamento</span>
-            <Database className="w-5 h-5 text-text-main" />
-          </div>
-          <div className="flex items-baseline gap-3">
-            <span className="font-heading text-3xl font-bold text-text-main">{displayStorage}</span>
-            <span className="text-xs font-medium text-text-secondary">Em uso</span>
           </div>
         </div>
 

@@ -7,13 +7,11 @@
       "properties": {
         "id": { "type": "string" },
         "client": { "type": "string" },
-        "node": { "type": "string" },
         "title": { "type": "string" },
         "status": { "type": "string", "enum": ["success", "warning", "failed"] },
         "category": { "type": "string" },
         "timestamp": { "type": "string" },
         "responsible": { "type": "string" },
-        "size": { "type": "string" },
         "technicalAnalysis": { "type": "string" },
         "actionPlan": { "type": "string" },
         "backupType": { "type": "string" }

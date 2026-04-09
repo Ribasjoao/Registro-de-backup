@@ -13,7 +13,6 @@ service cloud.firestore {
     //   - category: string (required)
     //   - timestamp: string (required)
     //   - responsible: string (required)
-    //   - size: string (optional)
     //   - technicalAnalysis: string (optional)
     //   - actionPlan: string (optional)
     //   - backupType: string (optional)
@@ -74,15 +73,13 @@ service cloud.firestore {
     }
 
     function isValidBackup(data) {
-      return hasOnlyAllowedFields(['client', 'node', 'title', 'status', 'category', 'timestamp', 'responsible', 'size', 'technicalAnalysis', 'actionPlan', 'backupType']) &&
+      return hasOnlyAllowedFields(['client', 'title', 'status', 'category', 'timestamp', 'responsible', 'technicalAnalysis', 'actionPlan', 'backupType']) &&
              data.client is string && data.client.size() > 0 && data.client.size() < 100 &&
-             (!('node' in data) || data.node == null || (data.node is string && data.node.size() < 100)) &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.status in ["success", "warning", "failed"] &&
              data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
              data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50 &&
              data.responsible is string && data.responsible.size() > 0 && data.responsible.size() < 100 &&
-             (!('size' in data) || data.size == null || (data.size is string && data.size.size() < 50)) &&
              (!('technicalAnalysis' in data) || data.technicalAnalysis == null || (data.technicalAnalysis is string && data.technicalAnalysis.size() < 5000)) &&
              (!('actionPlan' in data) || data.actionPlan == null || (data.actionPlan is string && data.actionPlan.size() < 5000)) &&
              (!('backupType' in data) || data.backupType == null || (data.backupType is string && data.backupType.size() < 100));
