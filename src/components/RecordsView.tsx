@@ -13,16 +13,34 @@ interface RecordsViewProps {
 export function RecordsView({ backups, onEdit }: RecordsViewProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterMode, setFilterMode] = useState<'week' | 'month' | 'all'>('month');
   const [selectedBackup, setSelectedBackup] = useState<BackupRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const filteredBackups = useMemo(() => {
-    return backups.filter(backup => 
+    let result = backups.filter(backup => 
       backup.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
       backup.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       backup.responsible.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [backups, searchTerm]);
+
+    const now = new Date();
+    if (filterMode === 'week') {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      result = result.filter(b => new Date(b.timestamp) >= sevenDaysAgo);
+    } else if (filterMode === 'month') {
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      result = result.filter(b => new Date(b.timestamp) >= thirtyDaysAgo);
+    }
+
+    return result;
+  }, [backups, searchTerm, filterMode]);
+
+  const currentMonthLabel = useMemo(() => {
+    const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const now = new Date();
+    return `${months[now.getMonth()]}/${now.getFullYear()}`;
+  }, []);
 
   const groupedBackups = useMemo(() => {
     const groups: Record<string, BackupRecord[]> = {};
@@ -164,8 +182,39 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
   return (
     <div className="card p-0 flex flex-col overflow-hidden">
       <div className="p-5 border-b border-border-main flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h2 className="font-heading text-lg font-bold text-text-main">Log de Backup - Março/2026</h2>
+        <div className="flex flex-wrap items-center gap-4">
+          <h2 className="font-heading text-lg font-bold text-text-main">Auditoria - {currentMonthLabel}</h2>
+          
+          <div className="flex items-center bg-bg-main p-1 rounded-lg border border-border-main">
+            <button 
+              onClick={() => setFilterMode('week')}
+              className={cn(
+                "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                filterMode === 'week' ? "bg-bg-card text-brand shadow-sm" : "text-text-secondary hover:text-text-main"
+              )}
+            >
+              Semana
+            </button>
+            <button 
+              onClick={() => setFilterMode('month')}
+              className={cn(
+                "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                filterMode === 'month' ? "bg-bg-card text-brand shadow-sm" : "text-text-secondary hover:text-text-main"
+              )}
+            >
+              Mês
+            </button>
+            <button 
+              onClick={() => setFilterMode('all')}
+              className={cn(
+                "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                filterMode === 'all' ? "bg-bg-card text-brand shadow-sm" : "text-text-secondary hover:text-text-main"
+              )}
+            >
+              Tudo
+            </button>
+          </div>
+
           <div className="relative flex items-center w-64 h-10 rounded-lg border border-border-main bg-bg-card focus-within:border-brand focus-within:ring-1 focus-within:ring-brand overflow-hidden transition-all">
             <div className="pl-3 pr-2 text-text-secondary flex items-center justify-center">
               <Search className="w-4 h-4" />

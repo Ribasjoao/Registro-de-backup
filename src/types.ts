@@ -18,6 +18,10 @@ export interface XPHistory {
 }
 
 export type BackupStatus = 'success' | 'warning' | 'failed';
+export type Criticality = 'low' | 'medium' | 'high' | 'critical';
+export type RootCause = 'network' | 'storage' | 'credential' | 'service' | 'window' | 'human' | 'other';
+export type Impact = 'low' | 'medium' | 'high';
+export type TreatmentStatus = 'pending' | 'analyzing' | 'mitigated' | 'resolved';
 
 export interface BackupRecord {
   id: string;
@@ -30,6 +34,15 @@ export interface BackupRecord {
   timestamp: string;
   responsible: string;
   backupType?: string; // New field for Local/Cloud/etc.
+  
+  // Executive reporting fields
+  criticality?: Criticality;
+  rootCause?: RootCause;
+  impact?: Impact;
+  treatmentStatus?: TreatmentStatus;
+  actionDeadline?: string;
+  recurrence?: boolean;
+  responsibleTreatment?: string;
 }
 
 export interface BackupType {

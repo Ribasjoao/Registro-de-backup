@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from './UI';
-import { AlertCircle, CheckCircle2, FileText, ClipboardList, User, Calendar as CalendarIcon, Building2, Database, Sparkles, Loader2 } from 'lucide-react';
-import { Client, BackupRecord, BackupStatus, BackupType } from '../types';
+import { AlertCircle, CheckCircle2, FileText, ClipboardList, User, Calendar as CalendarIcon, Building2, Database, Sparkles, Loader2, ShieldAlert, History, UserCheck, Timer, Repeat } from 'lucide-react';
+import { Client, BackupRecord, BackupStatus, BackupType, Criticality, RootCause, Impact, TreatmentStatus } from '../types';
 import { analyzeBackupLog } from '../services/geminiService';
 
 interface RegisterBackupModalProps {
@@ -27,6 +27,15 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
   const [rawLog, setRawLog] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Executive fields
+  const [criticality, setCriticality] = useState<Criticality>('medium');
+  const [rootCause, setRootCause] = useState<RootCause>('other');
+  const [impact, setImpact] = useState<Impact>('medium');
+  const [treatmentStatus, setTreatmentStatus] = useState<TreatmentStatus>('pending');
+  const [responsibleTreatment, setResponsibleTreatment] = useState('');
+  const [actionDeadline, setActionDeadline] = useState('');
+  const [recurrence, setRecurrence] = useState(false);
+
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
@@ -37,6 +46,14 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setStatus(initialData.status || 'success');
       setTimestamp(initialData.timestamp || new Date().toISOString());
       setRawLog('');
+      
+      setCriticality(initialData.criticality || 'medium');
+      setRootCause(initialData.rootCause || 'other');
+      setImpact(initialData.impact || 'medium');
+      setTreatmentStatus(initialData.treatmentStatus || 'pending');
+      setResponsibleTreatment(initialData.responsibleTreatment || '');
+      setActionDeadline(initialData.actionDeadline || '');
+      setRecurrence(initialData.recurrence || false);
     } else {
       setTitle('');
       setClient('');
@@ -46,6 +63,14 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       setStatus('success');
       setTimestamp(new Date().toISOString());
       setRawLog('');
+      
+      setCriticality('medium');
+      setRootCause('other');
+      setImpact('medium');
+      setTreatmentStatus('pending');
+      setResponsibleTreatment('');
+      setActionDeadline('');
+      setRecurrence(false);
     }
   }, [initialData, isOpen]);
 
@@ -91,6 +116,15 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
       timestamp,
       responsible: initialData?.responsible || defaultResponsible || 'João Santos',
       category: initialData?.category || 'Rotina',
+      
+      // Executive fields
+      criticality,
+      rootCause,
+      impact,
+      treatmentStatus,
+      responsibleTreatment,
+      actionDeadline,
+      recurrence,
     };
 
     onSave(backupData);
@@ -237,6 +271,135 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
             ))}
           </div>
         </div>
+
+        {/* Executive Presentation Fields (Visible for issues) */}
+        {(status === 'failed' || status === 'warning') && (
+          <div className="space-y-4 p-5 bg-bg-main rounded-2xl border border-border-main animate-in fade-in slide-in-from-top-4 duration-500">
+            <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Detalhamento Executivo
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Criticidade */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  Criticidade
+                </label>
+                <select 
+                  value={criticality}
+                  onChange={(e) => setCriticality(e.target.value as Criticality)}
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                >
+                  <option value="low">Baixa</option>
+                  <option value="medium">Média</option>
+                  <option value="high">Alta</option>
+                  <option value="critical">Crítica</option>
+                </select>
+              </div>
+
+              {/* Impacto */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  Impacto
+                </label>
+                <select 
+                  value={impact}
+                  onChange={(e) => setImpact(e.target.value as Impact)}
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                >
+                  <option value="low">Baixo</option>
+                  <option value="medium">Médio</option>
+                  <option value="high">Alto</option>
+                </select>
+              </div>
+
+              {/* Causa Raiz */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  <History className="w-3.5 h-3.5" />
+                  Causa Raiz
+                </label>
+                <select 
+                  value={rootCause}
+                  onChange={(e) => setRootCause(e.target.value as RootCause)}
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                >
+                  <option value="network">Rede</option>
+                  <option value="storage">Armazenamento</option>
+                  <option value="credential">Credencial</option>
+                  <option value="service">Serviço</option>
+                  <option value="window">Janela</option>
+                  <option value="human">Humano</option>
+                  <option value="other">Outro</option>
+                </select>
+              </div>
+
+              {/* Status do Tratamento */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  Status do Tratamento
+                </label>
+                <select 
+                  value={treatmentStatus}
+                  onChange={(e) => setTreatmentStatus(e.target.value as TreatmentStatus)}
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                >
+                  <option value="pending">Pendente</option>
+                  <option value="analyzing">Em Análise</option>
+                  <option value="mitigated">Mitigado</option>
+                  <option value="resolved">Resolvido</option>
+                </select>
+              </div>
+
+              {/* Responsável pelo Tratamento */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  Resp. Tratamento
+                </label>
+                <input
+                  type="text"
+                  value={responsibleTreatment}
+                  onChange={(e) => setResponsibleTreatment(e.target.value)}
+                  placeholder="Nome do responsável"
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                />
+              </div>
+
+              {/* Prazo da Ação */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-text-main">
+                  <Timer className="w-3.5 h-3.5" />
+                  Prazo da Ação
+                </label>
+                <input
+                  type="date"
+                  value={actionDeadline}
+                  onChange={(e) => setActionDeadline(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-border-main bg-bg-card text-xs text-text-main focus:ring-1 focus:ring-brand outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Recorrência */}
+            <div className="flex items-center gap-3 pt-2">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={recurrence}
+                  onChange={(e) => setRecurrence(e.target.checked)}
+                />
+                <div className="w-9 h-5 bg-border-main peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand"></div>
+                <span className="ml-3 text-xs font-bold text-text-main flex items-center gap-2">
+                  <Repeat className="w-3.5 h-3.5 text-text-secondary" />
+                  Problema Recorrente?
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* AI Analysis Section */}
         {(status === 'failed' || status === 'warning') && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, User, Building2, CheckCircle2, AlertTriangle, XCircle, FileText, ClipboardList, Database, HardDrive } from 'lucide-react';
+import { X, Calendar, User, Building2, CheckCircle2, AlertTriangle, XCircle, FileText, ClipboardList, Database, HardDrive, ShieldCheck } from 'lucide-react';
 import { BackupRecord } from '../types';
 import { StatusBadge } from './UI';
 import { cn } from '../lib/utils';
@@ -8,6 +8,21 @@ interface BackupDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   backup: BackupRecord | null;
+}
+
+function DetailBox({ label, value, variant = 'info' }: { label: string, value: string, variant?: 'info' | 'warning' | 'danger' }) {
+  const styles = {
+    info: 'bg-bg-main text-text-main border-border-main',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    danger: 'bg-danger/10 text-danger border-danger/20',
+  };
+
+  return (
+    <div className={cn("p-2.5 rounded-xl border", styles[variant])}>
+      <p className="text-[9px] font-bold uppercase tracking-wider opacity-60 mb-0.5">{label}</p>
+      <p className="text-xs font-bold truncate capitalize">{value.replace(/-/g, ' ')}</p>
+    </div>
+  );
 }
 
 export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsModalProps) {
@@ -118,7 +133,7 @@ export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsMod
               <CheckCircle2 className="w-5 h-5" />
               <h3 className="font-heading font-bold text-text-main">Plano de Ação</h3>
             </div>
-            <div className="bg-brand/5 rounded-xl p-4 border border-brand/10 min-h-[100px]">
+            <div className="bg-brand/5 rounded-xl p-4 border border-brand/10 min-h-[60px]">
               {backup.actionPlan ? (
                 <p className="text-sm text-text-main leading-relaxed whitespace-pre-wrap">
                   {backup.actionPlan}
@@ -128,6 +143,32 @@ export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsMod
               )}
             </div>
           </div>
+
+          {/* Executive Details (Conditional) */}
+          {(backup.criticality || backup.rootCause || backup.impact) && (
+            <div className="space-y-4 pt-4 border-t border-border-main">
+              <div className="flex items-center gap-2 text-text-main opacity-80 uppercase tracking-widest text-[10px] font-black">
+                <ShieldCheck className="w-4 h-4 text-brand" />
+                Informações Executivas
+              </div>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <DetailBox label="Criticidade" value={backup.criticality || '-'} variant={backup.criticality === 'critical' ? 'danger' : 'info'} />
+                <DetailBox label="Causa Raiz" value={backup.rootCause || '-'} />
+                <DetailBox label="Impacto" value={backup.impact || '-'} variant={backup.impact === 'high' ? 'warning' : 'info'} />
+                <DetailBox label="Status Tratamento" value={backup.treatmentStatus || '-'} />
+                <DetailBox label="Resp. Tratamento" value={backup.responsibleTreatment || '-'} />
+                <DetailBox label="Prazo" value={backup.actionDeadline ? new Date(backup.actionDeadline).toLocaleDateString('pt-BR') : '-'} />
+              </div>
+              
+              {backup.recurrence && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-danger/5 border border-danger/10 text-danger text-[10px] font-bold uppercase">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Problema Recorrente Detectado
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}

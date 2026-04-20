@@ -31,6 +31,7 @@ import { DestinationsView } from './components/DestinationsView';
 import { ReportsView } from './components/ReportsView';
 import { GamificationView } from './components/GamificationView';
 import { TodoView } from './components/TodoView';
+import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { Login } from './components/Login';
@@ -59,7 +60,7 @@ import {
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
 import { awardXP } from './lib/xpService';
 
-type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'gamification' | 'settings';
+type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'gamification' | 'weekly' | 'settings';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -573,7 +574,8 @@ export default function App() {
   }
 
   const navItems = [
-    { id: 'dashboard', label: 'Gate7', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'weekly', label: 'Resumo Semanal', icon: Presentation },
     { id: 'records', label: 'Registros', icon: ListTodo },
     { id: 'tasks', label: 'Tarefas', icon: LayoutList },
     { id: 'destinations', label: 'Destinos', icon: Database },
@@ -586,6 +588,8 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':
         return <DashboardView backups={backups} />;
+      case 'weekly':
+        return <WeeklyExecutiveView backups={backups} tasks={tasks} />;
       case 'records':
         return <RecordsView backups={backups} onEdit={isEditor ? openEditBackup : undefined} />;
       case 'tasks':
