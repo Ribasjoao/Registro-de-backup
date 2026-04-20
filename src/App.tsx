@@ -30,7 +30,7 @@ import { SettingsView } from './components/SettingsView';
 import { DestinationsView } from './components/DestinationsView';
 import { ReportsView } from './components/ReportsView';
 import { GamificationView } from './components/GamificationView';
-import { TodoView } from './components/TodoView';
+import { TaskCenter } from './components/TaskCenter/TaskCenter';
 import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
@@ -57,6 +57,7 @@ import {
   OperationType,
   User
 } from './firebase';
+import { generateRecurrentTasks } from './lib/taskService';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
 import { awardXP } from './lib/xpService';
 
@@ -209,6 +210,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (user && tasks.length > 0) {
+      const newRecurrent = generateRecurrentTasks(tasks, user.uid);
+      if (newRecurrent.length > 0) {
+        newRecurrent.forEach(async (t) => {
+          // Identify the original template to update its lastGenerated
+          const template = tasks.find(exist => exist.title === t.title && exist.recurrence?.type === t.recurrence?.type && exist.source === 'manual');
+          if (template) {
+            await updateTask(template.id, { 
+              recurrence: { ...template.recurrence!, lastGenerated: new Date().toISOString().split('T')[0] } 
+            });
+            await addTask(t);
+          }
+        });
+      }
+    }
+  }, [user, tasks.length]);
+
+  useEffect(() => {
     if (!user) return;
 
     // Listen to current user document for real-time XP updates
@@ -312,7 +331,22 @@ export default function App() {
   const addBackup = async (backup: Omit<BackupRecord, 'id'>) => {
     if (!isEditor) return;
     try {
-      await addDoc(collection(db, 'backups'), backup);
+      const docRef = await addDoc(collection(db, 'backups'), backup);
+      
+      // Auto-task for failed backups
+      if (backup.status === 'failed') {
+        await addTask({
+          title: `Tratar falha: ${backup.title}`,
+          type: 'incidente',
+          status: 'today',
+          priority: 'critical',
+          relatedBackupId: docRef.id,
+          relatedClient: backup.client,
+          relatedRecordTitle: backup.title,
+          source: 'incident',
+          notes: 'Gerada automaticamente por falha no backup.'
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'backups');
     }
@@ -393,21 +427,31 @@ export default function App() {
     }
   };
 
-  const addTask = async (title: string, important: boolean = false, tags: string[] = [], dueDate?: string, status: Task['status'] = 'inbox', duration?: number) => {
+  const addTask = async (taskData: Partial<Task>) => {
     if (!user) return;
     try {
-      const taskData = {
-        title,
+      const finalTask = {
+        title: taskData.title || 'Nova Tarefa',
+        description: taskData.description || '',
         completed: false,
-        important: important || false,
-        tags: tags || [],
-        dueDate: dueDate || "",
-        status: status || 'inbox',
-        duration: duration !== undefined ? duration : 0,
+        status: taskData.status || 'inbox',
+        type: taskData.type || 'rotina',
+        priority: taskData.priority || 'medium',
+        source: taskData.source || 'manual',
+        owner: taskData.owner || user.displayName || 'Técnico',
+        userId: user.uid,
         createdAt: new Date().toISOString(),
-        userId: user.uid
+        dueDate: taskData.dueDate || '',
+        tags: taskData.tags || [],
+        duration: taskData.duration || 0,
+        relatedBackupId: taskData.relatedBackupId || '',
+        relatedClient: taskData.relatedClient || '',
+        relatedRecordTitle: taskData.relatedRecordTitle || '',
+        recurrence: taskData.recurrence || { type: 'none' },
+        checklist: taskData.checklist || [],
+        notes: taskData.notes || '',
       };
-      await addDoc(collection(db, 'tasks'), taskData);
+      await addDoc(collection(db, 'tasks'), finalTask);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'tasks');
     }
@@ -416,19 +460,19 @@ export default function App() {
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
       const task = tasks.find(t => t.id === id);
-      const wasDone = task?.status === 'done';
+      const wasDone = task?.status === 'done' || task?.completed;
       const isDoneNow = updates.status === 'done' || updates.completed === true;
 
-      await updateDoc(doc(db, 'tasks', id), updates);
+      await updateDoc(doc(db, 'tasks', id), { ...updates, updatedAt: new Date().toISOString() });
 
       // XP Gamification for Tasks
       if (user && task && !wasDone && isDoneNow) {
-        let xpAmount = task.important ? 25 : 10;
-        let reasons = [task.important ? 'Tarefa Importante concluída' : 'Tarefa concluída'];
+        let xpAmount = task.priority === 'critical' ? 50 : task.priority === 'high' ? 25 : 10;
+        let reasons = [`Tarefa ${task.priority} concluída`];
 
-        if (task.duration && task.duration > 60) {
-          xpAmount += 15;
-          reasons.push('Bônus de Longa Duração (>60min)');
+        if (task.type === 'incidente') {
+          xpAmount += 20;
+          reasons.push('Resolução de Incidente');
         }
 
         if (task.isGolden) {
@@ -594,12 +638,10 @@ export default function App() {
         return <RecordsView backups={backups} onEdit={isEditor ? openEditBackup : undefined} />;
       case 'tasks':
         return (
-          <TodoView 
+          <TaskCenter 
             tasks={tasks} 
             onAddTask={addTask} 
             onUpdateTask={updateTask}
-            onToggleTask={toggleTask} 
-            onToggleImportant={toggleImportant} 
             onDeleteTask={deleteTask} 
           />
         );
@@ -652,7 +694,7 @@ export default function App() {
           <div className="h-20 flex items-center px-6 border-b border-border-main">
             <div className="flex items-center gap-3">
               <CloudDone className="w-6 h-6 text-brand" />
-              <span className="font-heading font-bold text-lg tracking-tight text-text-main">Gate7</span>
+              <span className="font-heading font-bold text-lg tracking-tight text-text-main">Dashboard</span>
             </div>
           </div>
           

@@ -1,0 +1,142 @@
+import React from 'react';
+import { 
+  Clock, 
+  AlertTriangle, 
+  Link as LinkIcon, 
+  CheckCircle2, 
+  Circle,
+  MoreVertical,
+  Calendar,
+  User,
+  Tags,
+  RefreshCw
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { Task } from '../../types';
+import { TASK_TYPES, TASK_PRIORITIES } from '../../lib/taskService';
+
+interface TaskItemProps {
+  task: Task;
+  onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onEditTask: (task: Task) => void;
+  compact?: boolean;
+}
+
+export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: TaskItemProps) {
+  const type = TASK_TYPES.find(t => t.value === task.type);
+  const priority = TASK_PRIORITIES.find(p => p.value === task.priority);
+  
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+
+  return (
+    <div 
+      className={cn(
+        "group relative bg-bg-card border border-border-main rounded-xl p-4 hover:shadow-lg hover:border-brand/30 transition-all cursor-pointer",
+        task.status === 'done' && "opacity-60",
+        task.status === 'blocked' && "border-danger/30 bg-danger/[0.02]",
+        task.status === 'waiting' && "border-warning/30 bg-warning/[0.02]"
+      )}
+      onClick={() => onEditTask(task)}
+    >
+      <div className="flex flex-col gap-3">
+        {/* Header: Status & Priority */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateTask(task.id, { status: task.status === 'done' ? 'inbox' : 'done' });
+              }}
+              className="mt-1 flex-shrink-0 text-text-secondary hover:text-brand transition-colors"
+            >
+              {task.status === 'done' ? (
+                <CheckCircle2 className="w-5 h-5 text-success fill-success/10" />
+              ) : (
+                <Circle className="w-5 h-5" />
+              )}
+            </button>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className={cn(
+                "text-sm font-bold text-text-main line-clamp-2 leading-snug",
+                task.status === 'done' && "line-through text-text-secondary"
+              )}>
+                {task.title}
+              </h3>
+              {task.relatedClient && (
+                <p className="text-[10px] font-black text-brand uppercase tracking-tighter mt-0.5">
+                  {task.relatedClient}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className={cn("flex-shrink-0 text-[10px] font-black uppercase tracking-widest", priority?.color)}>
+            {priority?.label}
+          </div>
+        </div>
+
+        {/* Info Rows */}
+        {!compact && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {task.type && (
+              <div className="flex items-center gap-1.5">
+                <div className={cn("w-2 h-2 rounded-full", type?.color)} />
+                <span className="text-[10px] font-bold text-text-secondary uppercase">{type?.label}</span>
+              </div>
+            )}
+            
+            {task.dueDate && (
+              <div className={cn(
+                "flex items-center gap-1.5 text-[10px] font-bold",
+                isOverdue ? "text-danger" : "text-text-secondary"
+              )}>
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{new Date(task.dueDate).toLocaleDateString('pt-BR')}</span>
+              </div>
+            )}
+
+            {task.relatedBackupId && (
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-brand">
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[120px]">Incident Linked</span>
+              </div>
+            )}
+
+            {task.owner && (
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-secondary">
+                <User className="w-3.5 h-3.5" />
+                <span>{task.owner}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer: Tags & Indicators */}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex gap-1">
+            {task.tags?.slice(0, 2).map(tag => (
+              <span key={tag} className="px-1.5 py-0.5 rounded bg-bg-main border border-border-main text-[9px] font-bold text-text-secondary uppercase">
+                {tag}
+              </span>
+            ))}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {task.status === 'blocked' && (
+              <AlertTriangle className="w-4 h-4 text-danger animate-pulse" />
+            )}
+            {task.recurrence?.type !== 'none' && (
+              <RefreshCw className="w-3.5 h-3.5 text-text-secondary" />
+            )}
+            {task.checklist && task.checklist.length > 0 && (
+              <div className="text-[9px] font-black text-text-secondary bg-bg-main px-1 rounded border border-border-main">
+                {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

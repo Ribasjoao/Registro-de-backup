@@ -56,17 +56,52 @@ export interface Client {
   createdAt: string;
 }
 
+export type TaskStatus = 'inbox' | 'today' | 'doing' | 'waiting' | 'blocked' | 'done';
+export type TaskType = 'rotina' | 'incidente' | 'plano_de_acao' | 'follow_up' | 'apresentacao' | 'melhoria';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskSource = 'manual' | 'incident' | 'recurrent' | 'automatic';
+
+export interface TaskChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface TaskRecurrence {
+  type: 'daily' | 'business' | 'weekly' | 'monthly' | 'fridays' | 'none';
+  daysOfWeek?: number[];
+  lastGenerated?: string;
+}
+
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   completed: boolean;
   createdAt: string;
+  updatedAt?: string;
   userId: string;
   dueDate?: string;
+  slaDate?: string;
   important?: boolean;
   tags?: string[];
-  status: 'inbox' | 'doing' | 'done';
-  duration?: number; // in minutes
+  status: TaskStatus;
+  type: TaskType;
+  priority: TaskPriority;
+  duration?: number;
+  
+  // Connections
+  relatedBackupId?: string;
+  relatedClient?: string;
+  relatedRecordTitle?: string;
+  
+  // Operational fields
+  owner: string;
+  blockedReason?: string;
+  source: TaskSource;
+  recurrence?: TaskRecurrence;
+  checklist?: TaskChecklistItem[];
+  notes?: string;
   isGolden?: boolean;
 }
 
