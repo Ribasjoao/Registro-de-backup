@@ -260,9 +260,9 @@ export function TodoView({ tasks, onAddTask, onUpdateTask, onToggleTask, onToggl
   );
 
   const columns: { id: Task['status']; title: string; icon: any; color: string }[] = [
-    { id: 'inbox', title: 'INBOX', icon: Inbox, color: 'text-slate-400' },
+    { id: 'inbox', title: 'INBOX', icon: Inbox, color: 'text-text-secondary' },
     { id: 'doing', title: 'FAZENDO', icon: Play, color: 'text-brand' },
-    { id: 'done', title: 'FEITO', icon: CheckCircle2, color: 'text-green-500' },
+    { id: 'done', title: 'FEITO', icon: CheckCircle2, color: 'text-success' },
   ];
 
   const tasksByStatus = useMemo(() => {
@@ -471,7 +471,7 @@ export function TodoView({ tasks, onAddTask, onUpdateTask, onToggleTask, onToggl
                   <div className="relative h-[600px] overflow-y-auto">
                     {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(hour => (
                       <div key={hour} className="grid grid-cols-8 border-b border-border-main/30 h-20 group">
-                        <div className="p-2 text-right border-r border-border-main bg-bg-main/10">
+                        <div className="p-2 text-right border-r border-border-main bg-bg-main/30">
                           <span className="text-[10px] font-bold text-text-secondary">{hour}:00</span>
                         </div>
                         {[0, 1, 2, 3, 4, 5, 6].map(dayIdx => (

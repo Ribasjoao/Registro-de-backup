@@ -125,7 +125,7 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
           <span className={cn(
             "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border",
             backup.backupType.toLowerCase().includes('cloud') || backup.backupType.toLowerCase().includes('nuvem')
-              ? "bg-blue-50 text-blue-600 border-blue-100"
+              ? "bg-brand/10 text-brand border-brand/20"
               : "bg-bg-main text-text-secondary border-border-main"
           )}>
             {backup.backupType}

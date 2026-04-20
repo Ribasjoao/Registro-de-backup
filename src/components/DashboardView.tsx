@@ -31,9 +31,9 @@ export function DashboardView({ backups }: DashboardViewProps) {
 
   // Pie Chart Data
   const pieData = [
-    { name: 'Sucesso', value: success, color: '#10B981' },
-    { name: 'Aviso', value: warning, color: '#F59E0B' },
-    { name: 'Falha', value: failed, color: '#EF4444' },
+    { name: 'Sucesso', value: success, color: 'var(--color-success)' },
+    { name: 'Aviso', value: warning, color: 'var(--color-warning)' },
+    { name: 'Falha', value: failed, color: 'var(--color-danger)' },
   ];
 
   // Daily Trend Data (Last 7 Days)
@@ -76,7 +76,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-border-main shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card p-4 rounded-2xl border border-border-main shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand">
             <Calendar className="w-5 h-5" />
@@ -146,16 +146,16 @@ export function DashboardView({ backups }: DashboardViewProps) {
               <AreaChart data={trendData}>
                 <defs>
                   <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-main)" opacity={0.5} />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#64748B', fontWeight: 500 }}
+                  tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 500 }}
                   dy={10}
                 />
                 <YAxis 
@@ -163,13 +163,21 @@ export function DashboardView({ backups }: DashboardViewProps) {
                   domain={[0, 100]}
                 />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                  cursor={{ stroke: '#2563EB', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--color-bg-card)', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--color-border-main)', 
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
+                    fontSize: '12px',
+                    color: 'var(--color-text-main)'
+                  }}
+                  itemStyle={{ color: 'var(--color-brand)' }}
+                  cursor={{ stroke: 'var(--color-brand)', strokeWidth: 1, strokeDasharray: '4 4' }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="rate" 
-                  stroke="#2563EB" 
+                  stroke="var(--color-brand)" 
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorRate)" 
@@ -325,7 +333,7 @@ function KPICard({ title, value, subtitle, icon, trend, trendUp, alert }: KPICar
     >
       <div className="flex justify-between items-start mb-3">
         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{title}</span>
-        <div className="p-2 rounded-lg bg-white shadow-sm border border-border-main">
+        <div className="p-2 rounded-lg bg-bg-card shadow-sm border border-border-main">
           {icon}
         </div>
       </div>

@@ -185,7 +185,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
               onClick={() => setFilter(f => ({ ...f, week: 'current' }))}
               className={cn(
                 "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
-                filter.week === 'current' ? "bg-white text-brand shadow-sm" : "text-text-secondary"
+                filter.week === 'current' ? "bg-bg-card text-brand shadow-sm" : "text-text-secondary"
               )}
             >
               Semana Atual
@@ -194,7 +194,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
               onClick={() => setFilter(f => ({ ...f, week: 'previous' }))}
               className={cn(
                 "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
-                filter.week === 'previous' ? "bg-white text-brand shadow-sm" : "text-text-secondary"
+                filter.week === 'previous' ? "bg-bg-card text-brand shadow-sm" : "text-text-secondary"
               )}
             >
               Anterior
@@ -259,7 +259,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Block 2: Top Incidents */}
         <div className="lg:col-span-2 space-y-6">
-          <section className="bg-white rounded-3xl border border-border-main p-8 shadow-sm overflow-hidden relative">
+          <section className="bg-bg-card rounded-3xl border border-border-main p-8 shadow-sm overflow-hidden relative">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <Layers className="w-5 h-5 text-brand" />
@@ -406,10 +406,19 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
                   }
                   return acc;
                 }, {} as Record<string, number>)).map(([name, value]) => ({ name, value }))}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-main)" opacity={0.5} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-secondary)' }} />
                   <YAxis hide />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Tooltip 
+                    cursor={{ fill: 'transparent' }} 
+                    contentStyle={{ 
+                      backgroundColor: 'var(--color-bg-card)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--color-border-main)', 
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                      color: 'var(--color-text-main)'
+                    }} 
+                  />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {Object.entries(backups.reduce((acc, curr) => {
                       if (curr.status !== 'success' && curr.rootCause) {
@@ -417,7 +426,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
                       }
                       return acc;
                     }, {} as Record<string, number>)).map((entry, index) => (
-                      <Cell key={index} fill={index % 2 === 0 ? '#2563EB' : '#94A3B8'} />
+                      <Cell key={index} fill={index % 2 === 0 ? 'var(--color-brand)' : 'var(--color-text-secondary)'} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -433,7 +442,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
             </h3>
             <div className="space-y-4">
               {plannedActions.length > 0 ? plannedActions.map((task) => (
-                <div key={task.id} className="p-4 rounded-2xl bg-white border border-brand/20 shadow-sm relative overflow-hidden group">
+                <div key={task.id} className="p-4 rounded-2xl bg-bg-card border border-brand/20 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-1.5 opacity-30 group-hover:opacity-100 transition-opacity">
                     <ArrowUpRight className="w-3 h-3 text-brand" />
                   </div>
@@ -489,7 +498,7 @@ function KPICard({ title, value, desc, icon, variant, trend }: KPICardProps) {
   return (
     <motion.div 
       whileHover={{ y: -4 }}
-      className="card p-6 bg-white border border-border-main relative overflow-hidden group shadow-sm"
+      className="card p-6 bg-bg-card border border-border-main relative overflow-hidden group shadow-sm"
     >
       <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-12 -mt-12 rounded-full opacity-5 group-hover:scale-125 transition-transform", colors[variant].split(' ')[1])} />
       

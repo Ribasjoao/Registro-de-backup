@@ -22,6 +22,10 @@
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
   --color-danger: var(--color-danger);
+
+  --color-surface: var(--color-surface);
+  --color-primary: var(--color-primary);
+  --color-muted: var(--color-muted);
 }
 
 @layer base {
@@ -45,6 +49,11 @@
     --color-danger: #EF4444;
     
     --shadow-card: 0 4px 6px rgba(0,0,0,0.05);
+
+    /* Semantic Aliases */
+    --color-surface: var(--color-bg-card);
+    --color-primary: var(--color-text-main);
+    --color-muted: var(--color-text-secondary);
   }
 
   .dark {
@@ -67,6 +76,11 @@
     --color-danger: #f87171;
     
     --shadow-card: none;
+
+    /* Semantic Aliases */
+    --color-surface: var(--color-bg-card);
+    --color-primary: var(--color-text-main);
+    --color-muted: var(--color-text-secondary);
   }
 
   body {

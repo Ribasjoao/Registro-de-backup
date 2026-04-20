@@ -563,7 +563,7 @@ export default function App() {
 
   if (!isAuthReady) {
     return (
-      <div className="h-screen bg-primary flex items-center justify-center">
+      <div className="h-screen bg-bg-main flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand border-t-transparent"></div>
       </div>
     );
