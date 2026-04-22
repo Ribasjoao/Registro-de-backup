@@ -14,7 +14,14 @@
         "responsible": { "type": "string" },
         "technicalAnalysis": { "type": "string" },
         "actionPlan": { "type": "string" },
-        "backupType": { "type": "string" }
+        "backupType": { "type": "string" },
+        "criticality": { "type": "string", "enum": ["Muito Alta", "Alta", "Média", "Baixa"] },
+        "rootCause": { "type": "string", "enum": ["Hardware", "Software", "Rede", "Humano", "Configuração", "Terceiro"] },
+        "impact": { "type": "string", "enum": ["Total", "Parcial", "Mínimo", "Nenhum"] },
+        "treatmentStatus": { "type": "string", "enum": ["Pendente", "Em Análise", "Em Correção", "Validando", "Resolvido"] },
+        "actionDeadline": { "type": "string" },
+        "recurrence": { "type": "boolean" },
+        "responsibleTreatment": { "type": "string" }
       },
       "required": ["client", "title", "status", "category", "timestamp", "responsible"]
     },
@@ -86,21 +93,51 @@
     },
     "task": {
       "title": "Task",
-      "description": "A task in the to-do list.",
+      "description": "An operational task in the system.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
+        "description": { "type": "string" },
         "completed": { "type": "boolean" },
         "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
         "userId": { "type": "string" },
         "dueDate": { "type": "string" },
+        "slaDate": { "type": "string" },
         "important": { "type": "boolean" },
         "tags": { "type": "array", "items": { "type": "string" } },
-        "status": { "type": "string", "enum": ["inbox", "doing", "done"] },
-        "duration": { "type": "number" }
+        "status": { "type": "string", "enum": ["inbox", "today", "doing", "waiting", "blocked", "done"] },
+        "type": { "type": "string", "enum": ["rotina", "incidente", "plano_de_acao", "follow_up", "apresentacao", "melhoria"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "duration": { "type": "number" },
+        "relatedBackupId": { "type": "string" },
+        "relatedClient": { "type": "string" },
+        "relatedRecordTitle": { "type": "string" },
+        "owner": { "type": "string" },
+        "blockedReason": { "type": "string" },
+        "source": { "type": "string", "enum": ["manual", "incident", "recurrent", "automatic"] },
+        "recurrence": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["daily", "business", "weekly", "monthly", "fridays", "none"] },
+            "daysOfWeek": { "type": "array", "items": { "type": "number" } },
+            "lastGenerated": { "type": "string" }
+          }
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "completed": { "type": "boolean" }
+            }
+          }
+        }
       },
-      "required": ["title", "completed", "createdAt", "userId", "status"]
+      "required": ["title", "completed", "createdAt", "userId", "status", "type", "priority", "owner"]
     }
   },
   "firestore": {

@@ -643,6 +643,7 @@ export default function App() {
             onAddTask={addTask} 
             onUpdateTask={updateTask}
             onDeleteTask={deleteTask} 
+            defaultOwner={user?.displayName || user?.email || 'Operador'}
           />
         );
       case 'destinations':

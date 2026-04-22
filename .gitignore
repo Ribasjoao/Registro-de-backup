@@ -6,3 +6,24 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Testing
+__snapshots__/
+
+# System
+Thumbs.db

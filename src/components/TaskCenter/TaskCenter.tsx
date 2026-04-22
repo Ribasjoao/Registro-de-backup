@@ -24,11 +24,12 @@ interface TaskCenterProps {
   onAddTask: (task: Partial<Task>) => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
+  defaultOwner: string;
 }
 
 export type TaskViewMode = 'dashboard' | 'kanban' | 'list' | 'agenda' | 'routines';
 
-export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask }: TaskCenterProps) {
+export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defaultOwner }: TaskCenterProps) {
   const [viewMode, setViewMode] = useState<TaskViewMode>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -205,6 +206,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask }: Tas
           setEditingTask(undefined);
         }}
         initialData={editingTask}
+        defaultOwner={defaultOwner}
       />
     </div>
   );

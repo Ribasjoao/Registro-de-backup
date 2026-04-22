@@ -26,6 +26,7 @@ interface TaskFormProps {
   onClose: () => void;
   onSave: (data: Partial<Task>) => void;
   initialData?: Partial<Task>;
+  defaultOwner: string;
 }
 
 const TEMPLATES: { label: string; icon: any; values: Partial<Task> }[] = [
@@ -56,14 +57,14 @@ const TEMPLATES: { label: string; icon: any; values: Partial<Task> }[] = [
   },
 ];
 
-export function TaskForm({ isOpen, onClose, onSave, initialData }: TaskFormProps) {
+export function TaskForm({ isOpen, onClose, onSave, initialData, defaultOwner }: TaskFormProps) {
   const [formData, setFormData] = useState<Partial<Task>>({
     title: '',
     description: '',
     status: 'inbox',
     type: 'rotina',
     priority: 'medium',
-    owner: 'João Santos', // Default
+    owner: defaultOwner, 
     checklist: [],
     tags: [],
     recurrence: { type: 'none' },
@@ -82,14 +83,14 @@ export function TaskForm({ isOpen, onClose, onSave, initialData }: TaskFormProps
         status: 'inbox',
         type: 'rotina',
         priority: 'medium',
-        owner: 'João Santos',
+        owner: defaultOwner,
         checklist: [],
         tags: [],
         recurrence: { type: 'none' },
         source: 'manual'
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, defaultOwner]);
 
   if (!isOpen) return null;
 

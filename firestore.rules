@@ -73,7 +73,7 @@ service cloud.firestore {
     }
 
     function isValidBackup(data) {
-      return hasOnlyAllowedFields(['client', 'title', 'status', 'category', 'timestamp', 'responsible', 'technicalAnalysis', 'actionPlan', 'backupType']) &&
+      return hasOnlyAllowedFields(['client', 'title', 'status', 'category', 'timestamp', 'responsible', 'technicalAnalysis', 'actionPlan', 'backupType', 'criticality', 'rootCause', 'impact', 'treatmentStatus', 'actionDeadline', 'recurrence', 'responsibleTreatment']) &&
              data.client is string && data.client.size() > 0 && data.client.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.status in ["success", "warning", "failed"] &&
@@ -82,7 +82,14 @@ service cloud.firestore {
              data.responsible is string && data.responsible.size() > 0 && data.responsible.size() < 100 &&
              (!('technicalAnalysis' in data) || data.technicalAnalysis == null || (data.technicalAnalysis is string && data.technicalAnalysis.size() < 5000)) &&
              (!('actionPlan' in data) || data.actionPlan == null || (data.actionPlan is string && data.actionPlan.size() < 5000)) &&
-             (!('backupType' in data) || data.backupType == null || (data.backupType is string && data.backupType.size() < 100));
+             (!('backupType' in data) || data.backupType == null || (data.backupType is string && data.backupType.size() < 100)) &&
+             (!('criticality' in data) || data.criticality == null || data.criticality in ["Muito Alta", "Alta", "Média", "Baixa"]) &&
+             (!('rootCause' in data) || data.rootCause == null || data.rootCause in ["Hardware", "Software", "Rede", "Humano", "Configuração", "Terceiro"]) &&
+             (!('impact' in data) || data.impact == null || data.impact in ["Total", "Parcial", "Mínimo", "Nenhum"]) &&
+             (!('treatmentStatus' in data) || data.treatmentStatus == null || data.treatmentStatus in ["Pendente", "Em Análise", "Em Correção", "Validando", "Resolvido"]) &&
+             (!('actionDeadline' in data) || data.actionDeadline == null || data.actionDeadline is string) &&
+             (!('recurrence' in data) || data.recurrence == null || data.recurrence is bool) &&
+             (!('responsibleTreatment' in data) || data.responsibleTreatment == null || data.responsibleTreatment is string);
     }
 
     function isValidClient(data) {
@@ -129,16 +136,29 @@ service cloud.firestore {
     }
 
     function isValidTask(data) {
-      return hasOnlyAllowedFields(['title', 'completed', 'createdAt', 'userId', 'dueDate', 'important', 'tags', 'status', 'duration']) &&
+      return hasOnlyAllowedFields(['title', 'description', 'completed', 'createdAt', 'updatedAt', 'userId', 'dueDate', 'slaDate', 'important', 'tags', 'status', 'type', 'priority', 'duration', 'relatedBackupId', 'relatedClient', 'relatedRecordTitle', 'owner', 'blockedReason', 'source', 'recurrence', 'checklist']) &&
              data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
              data.completed is bool &&
              data.createdAt is string &&
              data.userId is string && data.userId == request.auth.uid &&
-             data.status in ["inbox", "doing", "done"] &&
+             data.status in ["inbox", "today", "doing", "waiting", "blocked", "done"] &&
+             data.type in ["rotina", "incidente", "plano_de_acao", "follow_up", "apresentacao", "melhoria"] &&
+             data.priority in ["low", "medium", "high", "critical"] &&
+             data.owner is string &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 2000)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is string) &&
              (!('dueDate' in data) || data.dueDate == null || data.dueDate is string) &&
+             (!('slaDate' in data) || data.slaDate == null || data.slaDate is string) &&
              (!('important' in data) || data.important == null || data.important is bool) &&
-             (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() <= 10)) &&
-             (!('duration' in data) || data.duration == null || data.duration is number);
+             (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('duration' in data) || data.duration == null || data.duration is number) &&
+             (!('relatedBackupId' in data) || data.relatedBackupId == null || data.relatedBackupId is string) &&
+             (!('relatedClient' in data) || data.relatedClient == null || data.relatedClient is string) &&
+             (!('relatedRecordTitle' in data) || data.relatedRecordTitle == null || data.relatedRecordTitle is string) &&
+             (!('blockedReason' in data) || data.blockedReason == null || (data.blockedReason is string && data.blockedReason.size() < 1000)) &&
+             (!('source' in data) || data.source == null || data.source in ["manual", "incident", "recurrent", "automatic"]) &&
+             (!('recurrence' in data) || data.recurrence == null || (data.recurrence is map && data.recurrence.type in ["daily", "business", "weekly", "monthly", "fridays", "none"])) &&
+             (!('checklist' in data) || data.checklist == null || data.checklist is list);
     }
 
     // ===============================================================
