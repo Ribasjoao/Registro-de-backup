@@ -7,41 +7,28 @@ service cloud.firestore {
     //
     // Collection: backups
     // Fields:
-    //   - client: string (required)
-    //   - title: string (required)
-    //   - status: string (required, enum: ["success", "warning", "failed"])
-    //   - category: string (required)
-    //   - timestamp: string (required)
-    //   - responsible: string (required)
-    //   - technicalAnalysis: string (optional)
-    //   - actionPlan: string (optional)
-    //   - backupType: string (optional)
+    //   - client, title, status, category, timestamp, responsible, technicalAnalysis, actionPlan, backupType
+    //   - criticality, rootCause, impact, treatmentStatus, actionDeadline, recurrence, responsibleTreatment
     //
     // Collection: backup_types
     // Fields:
-    //   - name: string (required)
+    //   - name
     //
     // Collection: clients
     // Fields:
-    //   - name: string (required)
+    //   - name, createdAt
     //
     // Collection: destinations
     // Fields:
-    //   - name: string (required)
-    //   - client: string (required)
-    //   - freeSpaceTB: number (required)
-    //   - usedSpaceTB: number (required)
-    //   - totalSpaceTB: number (required)
-    //   - savingsPercent: number (required)
-    //   - savingsTB: number (required)
-    //   - backupsCount: number (required)
-    //   - location: string (required, enum: ["Local", "S3", "Cloud"])
+    //   - name, client, freeSpaceTB, usedSpaceTB, totalSpaceTB, savingsPercent, savingsTB, backupsCount, location
     //
     // Collection: users
     // Fields:
-    //   - uid: string (required)
-    //   - email: string (required)
-    //   - role: string (required, enum: ["admin", "viewer"])
+    //   - uid, email, role, xp, level, displayName, photoURL
+    //
+    // Collection: tasks
+    // Fields:
+    //   - title, description, completed, createdAt, updatedAt, userId, dueDate, slaDate, important, tags, status, type, priority, duration, relatedBackupId, relatedClient, relatedRecordTitle, owner, blockedReason, source, recurrence, checklist
     //
     // ===============================================================
 

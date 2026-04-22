@@ -29,10 +29,9 @@ export function ReportsView({ backups }: ReportsViewProps) {
           const result = await window.aistudio.hasSelectedApiKey();
           setHasKey(result);
         } else {
-          const runtimeKey = (window as any).process?.env?.GEMINI_API_KEY || (window as any).process?.env?.API_KEY;
-          const buildTimeKey = process.env.GEMINI_API_KEY;
-          const key = runtimeKey || buildTimeKey;
-          setHasKey(!!key && key !== "undefined" && key !== "MY_GEMINI_API_KEY" && key !== "YOUR_GEMINI_API_KEY" && key.length > 10);
+          // Em produção fora do AI Studio, as Cloud Functions gerenciam a chave.
+          // Não devemos expor ou checar chaves no client-side.
+          setHasKey(true); 
         }
       } catch (e) {
         console.error("Error checking API key:", e);
