@@ -3,8 +3,21 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// Import the Firebase configuration
-import firebaseConfig from '../firebase-applet-config.json';
+// Import the fallback Firebase configuration
+import defaultFirebaseConfig from '../firebase-applet-config.json';
+
+// Support both environment variables and the local configuration file
+const metaEnv = (import.meta as any).env || {};
+const firebaseConfig = {
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
+  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
+  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
+  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket,
+  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId,
+  appId: metaEnv.VITE_FIREBASE_APP_ID || defaultFirebaseConfig.appId,
+  measurementId: metaEnv.VITE_FIREBASE_MEASUREMENT_ID || defaultFirebaseConfig.measurementId,
+  firestoreDatabaseId: metaEnv.VITE_FIREBASE_FIRESTORE_DATABASE_ID || defaultFirebaseConfig.firestoreDatabaseId || (metaEnv.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId)
+};
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);

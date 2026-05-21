@@ -1,0 +1,9 @@
+{
+  "name": "gate-7",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
