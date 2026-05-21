@@ -41,7 +41,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && (
+        (request.auth.token != null && 'role' in request.auth.token && request.auth.token.role == 'admin') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
     }
 
     function isEditor() {
@@ -181,6 +184,7 @@ service cloud.firestore {
          request.resource.data.uid == resource.data.uid &&
          request.resource.data.email == resource.data.email &&
          (!('xp' in request.resource.data) || 
+          (request.resource.data.xp == 0 && request.resource.data.level == 'Padawan do Backup') ||
           (!('xp' in resource.data) && request.resource.data.xp <= 100) || 
           ('xp' in resource.data && request.resource.data.xp - resource.data.xp <= 100 && request.resource.data.xp - resource.data.xp >= -100)))
       );
@@ -190,7 +194,8 @@ service cloud.firestore {
     match /xp_history/{historyId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidXPHistory(request.resource.data);
-      allow update, delete: if isAdmin();
+      allow delete: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow update: if isAdmin();
     }
 
     match /backup_types/{typeId} {

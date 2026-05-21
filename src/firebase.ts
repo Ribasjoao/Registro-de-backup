@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, getIdTokenResult } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Import the Firebase configuration
@@ -94,6 +94,7 @@ export {
   addDoc, 
   updateDoc, 
   deleteDoc,
+  getDocs,
   httpsCallable
 };
 export type { User };

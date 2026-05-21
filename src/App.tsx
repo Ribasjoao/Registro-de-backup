@@ -29,7 +29,6 @@ import { RecordsView } from './components/RecordsView';
 import { SettingsView } from './components/SettingsView';
 import { DestinationsView } from './components/DestinationsView';
 import { ReportsView } from './components/ReportsView';
-import { GamificationView } from './components/GamificationView';
 import { TaskCenter } from './components/TaskCenter/TaskCenter';
 import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
 import { PresentationCarousel } from './components/PresentationCarousel';
@@ -49,6 +48,7 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
+  getDocs,
   doc, 
   setDoc, 
   getDoc,
@@ -59,9 +59,8 @@ import {
 } from './firebase';
 import { generateRecurrentTasks } from './lib/taskService';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
-import { awardXP } from './lib/xpService';
 
-type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'gamification' | 'weekly' | 'settings';
+type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -164,12 +163,8 @@ export default function App() {
           };
 
           if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              ...userData,
-              xp: 0,
-              level: 'Padawan do Backup'
-            });
-            setAppUser({ id: currentUser.uid, ...userData, xp: 0, level: 'Padawan do Backup' } as AppUser);
+            await setDoc(userRef, userData);
+            setAppUser({ id: currentUser.uid, ...userData } as AppUser);
           } else {
             if (roleFromClaim === 'admin' && userSnap.data().role !== 'admin') {
               // Ensure the admin claim always has admin role in Firestore
@@ -459,29 +454,7 @@ export default function App() {
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
-      const task = tasks.find(t => t.id === id);
-      const wasDone = task?.status === 'done' || task?.completed;
-      const isDoneNow = updates.status === 'done' || updates.completed === true;
-
       await updateDoc(doc(db, 'tasks', id), { ...updates, updatedAt: new Date().toISOString() });
-
-      // XP Gamification for Tasks
-      if (user && task && !wasDone && isDoneNow) {
-        let xpAmount = task.priority === 'critical' ? 50 : task.priority === 'high' ? 25 : 10;
-        let reasons = [`Tarefa ${task.priority} concluída`];
-
-        if (task.type === 'incidente') {
-          xpAmount += 20;
-          reasons.push('Resolução de Incidente');
-        }
-
-        if (task.isGolden) {
-          xpAmount += 50;
-          reasons.push('Bônus de TAREFA DE OURO');
-        }
-
-        await awardXP(user.uid, xpAmount, reasons.join(' + '));
-      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
@@ -489,31 +462,10 @@ export default function App() {
 
   const toggleTask = async (id: string, completed: boolean) => {
     try {
-      const task = tasks.find(t => t.id === id);
-      const wasDone = task?.completed;
-
       await updateDoc(doc(db, 'tasks', id), { 
         completed,
         status: completed ? 'done' : 'doing'
       });
-
-      // XP Gamification for Tasks
-      if (user && task && !wasDone && completed) {
-        let xpAmount = task.important ? 25 : 10;
-        let reasons = [task.important ? 'Tarefa Importante concluída' : 'Tarefa concluída'];
-
-        if (task.duration && task.duration > 60) {
-          xpAmount += 15;
-          reasons.push('Bônus de Longa Duração (>60min)');
-        }
-
-        if (task.isGolden) {
-          xpAmount += 50;
-          reasons.push('Bônus de TAREFA DE OURO');
-        }
-
-        await awardXP(user.uid, xpAmount, reasons.join(' + '));
-      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
@@ -535,6 +487,59 @@ export default function App() {
     }
   };
 
+  const handleResetData = async (
+    resetType: 'personal' | 'system',
+    systemOptions?: {
+      deleteBackups: boolean;
+      deleteClients: boolean;
+      deleteDestinations: boolean;
+      clientNameFilter?: string;
+    }
+  ) => {
+    if (!user) return;
+    try {
+      if (resetType === 'personal') {
+        // 1. Apagar tarefas pessoais do usuário
+        const qTasks = query(collection(db, 'tasks'), where('userId', '==', user.uid));
+        const tasksSnapshot = await getDocs(qTasks);
+        const taskDeletePromises = tasksSnapshot.docs.map(docRef => deleteDoc(doc(db, 'tasks', docRef.id)));
+        await Promise.all(taskDeletePromises);
+      } else if (resetType === 'system' && isAdmin && systemOptions) {
+        const { deleteBackups, deleteClients, deleteDestinations, clientNameFilter } = systemOptions;
+
+        // 1. Apagar backups registrados (com ou sem filtro por cliente)
+        if (deleteBackups) {
+          let backupsSnapshot;
+          if (clientNameFilter && clientNameFilter !== 'all') {
+            const q = query(collection(db, 'backups'), where('client', '==', clientNameFilter));
+            backupsSnapshot = await getDocs(q);
+          } else {
+            backupsSnapshot = await getDocs(collection(db, 'backups'));
+          }
+          const backupDeletePromises = backupsSnapshot.docs.map(docRef => deleteDoc(doc(db, 'backups', docRef.id)));
+          await Promise.all(backupDeletePromises);
+        }
+
+        // 2. Apagar todos os clientes se configurado
+        if (deleteClients) {
+          const clientsSnapshot = await getDocs(collection(db, 'clients'));
+          const clientDeletePromises = clientsSnapshot.docs.map(docRef => deleteDoc(doc(db, 'clients', docRef.id)));
+          await Promise.all(clientDeletePromises);
+        }
+
+        // 3. Apagar todas as destinos de armazenamento configurados se selecionado
+        if (deleteDestinations) {
+          const destinationsSnapshot = await getDocs(collection(db, 'destinations'));
+          const destDeletePromises = destinationsSnapshot.docs.map(docRef => deleteDoc(doc(db, 'destinations', docRef.id)));
+          await Promise.all(destDeletePromises);
+        }
+      }
+    } catch (error) {
+      console.error('Error resetting data:', error);
+      handleFirestoreError(error, OperationType.DELETE, `reset/${resetType}`);
+    }
+  };
+
   const openEditBackup = (backup: BackupRecord) => {
     if (!isEditor) return;
     setEditingBackup(backup);
@@ -551,37 +556,6 @@ export default function App() {
     setIsSaving(true);
     try {
       const isNew = !('id' in backupData && backupData.id);
-      
-      // Gamification Logic
-      if (user && appUser) {
-        const todayStr = new Date().toLocaleDateString('pt-BR');
-        
-        if (isNew) {
-          // Rule 1: Register technical analysis of a failed backup on the same day
-          if (backupData.status === 'failed' && backupData.technicalAnalysis && backupData.technicalAnalysis.trim() !== '') {
-            // Assuming timestamp is generated today for new backups
-            await awardXP(user.uid, 10, 'Análise Rápida: Falha analisada no mesmo dia.');
-          }
-        } else if (editingBackup) {
-          // Rule 1 (Update): Added technical analysis to a failed backup on the same day
-          const wasMissingAnalysis = !editingBackup.technicalAnalysis || editingBackup.technicalAnalysis.trim() === '';
-          const hasAnalysisNow = backupData.technicalAnalysis && backupData.technicalAnalysis.trim() !== '';
-          const isSameDay = editingBackup.timestamp.split(' ')[0] === todayStr; // Basic check, assuming format DD/MM/YYYY HH:MM
-          
-          if (backupData.status === 'failed' && wasMissingAnalysis && hasAnalysisNow && isSameDay) {
-            await awardXP(user.uid, 10, 'Análise Rápida: Falha analisada no mesmo dia.');
-          }
-
-          // Rule 2: Resolve a failed backup of a "Critical" server
-          const wasFailed = editingBackup.status === 'failed';
-          const isSuccessNow = backupData.status === 'success';
-          const isCritical = backupData.category?.toLowerCase().includes('crítico') || backupData.category?.toLowerCase().includes('critico');
-
-          if (wasFailed && isSuccessNow && isCritical) {
-            await awardXP(user.uid, 20, `Salvador Crítico: Resolveu falha no servidor ${backupData.client}.`);
-          }
-        }
-      }
 
       // Save Backup
       if (!isNew) {
@@ -624,7 +598,6 @@ export default function App() {
     { id: 'tasks', label: 'Tarefas', icon: LayoutList },
     { id: 'destinations', label: 'Destinos', icon: Database },
     { id: 'reports', label: 'Relatórios IA', icon: Sparkles },
-    { id: 'gamification', label: 'Gamificação', icon: Trophy },
     ...(isAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings }] : []),
   ];
 
@@ -650,8 +623,6 @@ export default function App() {
         return <DestinationsView destinations={destinations} clients={clients} onUpdate={isEditor ? updateDestination : async () => {}} onAdd={isEditor ? addDestination : async () => {}} onDelete={isAdmin ? deleteDestination : () => {}} isAdmin={isEditor} />;
       case 'reports':
         return <ReportsView backups={backups} />;
-      case 'gamification':
-        return <GamificationView currentUser={appUser} users={users} />;
       case 'settings':
         return (
           <SettingsView 
@@ -670,6 +641,7 @@ export default function App() {
             onUpdateBackupType={updateBackupType}
             onDeleteBackupType={deleteBackupType}
             isAdmin={isAdmin}
+            onResetData={handleResetData}
           />
         );
       default:
@@ -711,7 +683,7 @@ export default function App() {
                     : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
                 )}
               >
-                <item.icon className={cn("w-5 h-5", item.id === 'gamification' && currentView !== 'gamification' && "text-yellow-500")} />
+                <item.icon className="w-5 h-5" />
                 <span className="text-sm">{item.label}</span>
               </button>
             ))}
@@ -725,8 +697,8 @@ export default function App() {
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
-                  <span className="text-xs text-brand truncate flex items-center gap-1">
-                    {appUser?.level || 'Padawan do Backup'}
+                  <span className="text-xs text-brand truncate flex items-center gap-1 uppercase tracking-wider font-semibold">
+                    {appUser?.role === 'admin' ? 'Administrador' : appUser?.role === 'editor' ? 'Editor' : 'Visualizador'}
                   </span>
                 </div>
               </div>

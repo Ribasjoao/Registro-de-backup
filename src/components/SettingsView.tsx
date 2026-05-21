@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings } from 'lucide-react';
+import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Client, StorageDestination, BackupType } from '../types';
 import { EditDestinationModal } from './EditDestinationModal';
@@ -23,9 +23,18 @@ interface SettingsViewProps {
   users?: any[];
   onUpdateUserRole?: (userId: string, newRole: string) => void;
   isAdmin: boolean;
+  onResetData?: (
+    resetType: 'personal' | 'system',
+    systemOptions?: {
+      deleteBackups: boolean;
+      deleteClients: boolean;
+      deleteDestinations: boolean;
+      clientNameFilter?: string;
+    }
+  ) => Promise<void>;
 }
 
-type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security';
+type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'reset';
 
 export function SettingsView({ 
   clients, 
@@ -42,7 +51,8 @@ export function SettingsView({
   onDeleteBackupType,
   users = [],
   onUpdateUserRole,
-  isAdmin
+  isAdmin,
+  onResetData
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [newClientName, setNewClientName] = useState('');
@@ -55,6 +65,56 @@ export function SettingsView({
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [deletingDestId, setDeletingDestId] = useState<string | null>(null);
   const [deletingBackupTypeId, setDeletingBackupTypeId] = useState<string | null>(null);
+
+  const [isResettingPersonal, setIsResettingPersonal] = useState(false);
+  const [isResettingSystem, setIsResettingSystem] = useState(false);
+  const [showPersonalConfirm, setShowPersonalConfirm] = useState(false);
+  const [showSystemConfirm, setShowSystemConfirm] = useState(false);
+
+  // Filtros de exclusão para o reset do sistema
+  const [deleteBackups, setDeleteBackups] = useState(true);
+  const [deleteClients, setDeleteClients] = useState(false);
+  const [deleteDestinations, setDeleteDestinations] = useState(false);
+  const [selectedClientFilter, setSelectedClientFilter] = useState('all');
+
+  const handleResetPersonal = async () => {
+    if (!onResetData) return;
+    setIsResettingPersonal(true);
+    try {
+      await onResetData('personal');
+      setShowPersonalConfirm(false);
+      alert('Seus dados pessoais (Tarefas e Gamificação) foram resetados de volta ao zero com sucesso!');
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao realizar o reset dos dados pessoais.');
+    } finally {
+      setIsResettingPersonal(false);
+    }
+  };
+
+  const handleResetSystem = async () => {
+    if (!onResetData) return;
+    if (!deleteBackups && !deleteClients && !deleteDestinations) {
+      alert('Selecione pelo menos uma das opções acima para limpar do banco de dados.');
+      return;
+    }
+    setIsResettingSystem(true);
+    try {
+      await onResetData('system', {
+        deleteBackups,
+        deleteClients,
+        deleteDestinations,
+        clientNameFilter: selectedClientFilter
+      });
+      setShowSystemConfirm(false);
+      alert('Os dados selecionados do sistema foram limpos com sucesso!');
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao realizar o reset dos dados selecionados do sistema.');
+    } finally {
+      setIsResettingSystem(false);
+    }
+  };
 
   const handleAddClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -453,6 +513,209 @@ export function SettingsView({
             />
           </>
         );
+      case 'reset':
+        return (
+          <>
+            <div className="mb-6">
+              <h2 className="font-heading text-xl text-text-main font-bold flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-danger" />
+                Zerar Dados e Começar do Zero
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Utilize as ferramentas abaixo para redefinir suas informações de progresso pessoais ou limpar todo o painel do sistema para um novo começo.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Reset pessoal */}
+              <div className="border border-border-main rounded-xl p-5 hover:border-danger/30 transition-all bg-bg-main/50 animate-fadeIn">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-danger/10 text-danger rounded-lg border border-danger/20 shrink-0">
+                    <History className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-text-main mb-1">
+                      Zerar Minhas Tarefas Pessoais
+                    </h3>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Esta ação irá excluir permanentemente todas as suas tarefas pessoais da lista de afazeres.
+                    </p>
+
+                    {showPersonalConfirm ? (
+                      <div className="bg-danger/5 border border-danger/20 rounded-lg p-4 mb-4">
+                        <div className="flex gap-2 text-danger text-sm font-semibold mb-3 items-center">
+                          <AlertTriangle className="w-4 h-4 shrink-0 animate-bounce" />
+                          <span>Esta ação é irreversível! Confirma que deseja apagar suas tarefas pessoais?</span>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            disabled={isResettingPersonal}
+                            onClick={handleResetPersonal}
+                            className="px-4 py-2 text-xs font-bold text-white bg-danger hover:bg-danger-dark rounded transition-colors disabled:opacity-50"
+                          >
+                            {isResettingPersonal ? 'Zerando...' : 'Sim, Zerar Minhas Tarefas'}
+                          </button>
+                          <button
+                            disabled={isResettingPersonal}
+                            onClick={() => setShowPersonalConfirm(false)}
+                            className="px-4 py-2 text-xs font-semibold text-text-main border border-border-main rounded hover:bg-bg-main transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowPersonalConfirm(true)}
+                        className="px-4 py-2 text-xs font-bold text-white bg-danger hover:bg-danger-dark rounded transition-colors"
+                      >
+                        Zerar Minhas Tarefas
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reset do sistema para administradores */}
+              {isAdmin && (
+                <div className="border border-border-main rounded-xl p-5 hover:border-danger/30 transition-all bg-bg-main/50 animate-fadeIn">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-danger/10 text-danger rounded-lg border border-danger/20 shrink-0">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-text-main mb-1">
+                        Limpeza Customizada e Reset do Painel
+                      </h3>
+                      <p className="text-sm text-text-secondary mb-4">
+                        <span className="font-bold text-danger">Apenas para Administradores.</span> Selecione precisamente o que deseja limpar do banco de dados do Gate7. Você pode, por exemplo, apagar apenas os registros de backups sem afetar os clientes já criados.
+                      </p>
+
+                      {/* Opções de Filtro de Limpeza */}
+                      <div className="space-y-3 mb-5 p-4 bg-bg-main/40 border border-border-main rounded-lg max-w-lg">
+                        <div className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Opções de Limpeza:</div>
+                        
+                        <label className="flex items-start gap-3 cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={deleteBackups} 
+                            onChange={(e) => setDeleteBackups(e.target.checked)}
+                            className="w-4 h-4 rounded border-border-main text-brand bg-bg-main focus:ring-brand mt-0.5"
+                          />
+                          <div>
+                            <span className="text-sm font-semibold text-text-main">Excluir registros de Backups</span>
+                            <p className="text-xs text-text-secondary">Limpa o histórico de execuções de backup cadastradas.</p>
+                          </div>
+                        </label>
+
+                        {/* Filtro por Cliente (só aparece se 'Excluir registros de Backups' estiver marcado) */}
+                        {deleteBackups && (
+                          <div className="ml-7 p-3 bg-bg-main border border-border-main/50 rounded-lg animate-slideDown">
+                            <label className="block text-xs font-bold text-text-secondary mb-1">
+                              Filtrar Backups por Cliente específico:
+                            </label>
+                            <select
+                              value={selectedClientFilter}
+                              onChange={(e) => setSelectedClientFilter(e.target.value)}
+                              className="w-full text-sm bg-bg-main border border-border-main rounded px-3 py-1.5 focus:border-brand focus:outline-none text-text-main font-medium"
+                            >
+                              <option value="all">🧹 Excluir Backups de TODOS os Clientes (Completo)</option>
+                              {clients.map((client) => (
+                                <option key={client.id} value={client.name}>
+                                  👤 Apenas do Cliente: {client.name}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[11px] text-text-secondary mt-1">
+                              {selectedClientFilter === 'all' 
+                                ? "Deletará absolutamente todos os backups registrados."
+                                : `Deletará unicamente os backups que pertencem a "${selectedClientFilter}".`
+                              }
+                            </p>
+                          </div>
+                        )}
+
+                        <label className="flex items-start gap-3 cursor-pointer select-none border-t border-border-main/40 pt-3">
+                          <input 
+                            type="checkbox" 
+                            checked={deleteClients} 
+                            onChange={(e) => setDeleteClients(e.target.checked)}
+                            className="w-4 h-4 rounded border-border-main text-brand bg-bg-main focus:ring-brand mt-0.5"
+                          />
+                          <div>
+                            <span className="text-sm font-semibold text-text-main">Excluir Clientes Cadastrados</span>
+                            <p className="text-xs text-text-secondary">Remove os clientes da lista. Excluir os clientes com backups ativos não é recomendado.</p>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-3 cursor-pointer select-none border-t border-border-main/40 pt-3">
+                          <input 
+                            type="checkbox" 
+                            checked={deleteDestinations} 
+                            onChange={(e) => setDeleteDestinations(e.target.checked)}
+                            className="w-4 h-4 rounded border-border-main text-brand bg-bg-main focus:ring-brand mt-0.5"
+                          />
+                          <div>
+                            <span className="text-sm font-semibold text-text-main">Excluir Destinos de Armazenamento</span>
+                            <p className="text-xs text-text-secondary">Remove as configurações registradas de locais físicos e na nuvem.</p>
+                          </div>
+                        </label>
+                      </div>
+
+                      {showSystemConfirm ? (
+                        <div className="bg-danger/5 border border-danger/20 rounded-lg p-4 mb-4 max-w-lg">
+                          <div className="flex gap-2 text-danger text-sm font-semibold mb-3 items-start">
+                            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 animate-bounce" />
+                            <span>
+                              {deleteBackups && selectedClientFilter !== 'all' && !deleteClients && !deleteDestinations ? (
+                                `Esta ação é irreversível! Confirma a exclusão de todos os backups associados unicamente ao cliente "${selectedClientFilter}"?`
+                              ) : (
+                                "ATENÇÃO: Os dados selecionados serão excluídos permanentemente de todo o sistema. Deseja prosseguir?"
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              disabled={isResettingSystem}
+                              onClick={handleResetSystem}
+                              className="px-4 py-2 text-xs font-bold text-white bg-danger hover:bg-danger-dark rounded transition-colors disabled:opacity-50"
+                            >
+                              {isResettingSystem ? 'Executando...' : 'Confirmar e Limpar Banco'}
+                            </button>
+                            <button
+                              disabled={isResettingSystem}
+                              onClick={() => setShowSystemConfirm(false)}
+                              className="px-4 py-2 text-xs font-semibold text-text-main border border-border-main rounded hover:bg-bg-main transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (!deleteBackups && !deleteClients && !deleteDestinations) {
+                              alert('Selecione pelo menos uma das opções acima para redefinir!');
+                              return;
+                            }
+                            setShowSystemConfirm(true);
+                          }}
+                          className="px-4 py-2 text-xs font-bold text-white bg-danger hover:bg-danger-dark rounded transition-colors"
+                        >
+                          {deleteBackups && selectedClientFilter !== 'all' && !deleteClients && !deleteDestinations 
+                            ? `Limpar Backups de "${selectedClientFilter}"`
+                            : "Executar Limpeza Configurada"
+                          }
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </>
+        );
       case 'security':
         if (!isAdmin) return null;
         return (
@@ -582,12 +845,24 @@ export function SettingsView({
           <Shield className={cn("w-5 h-5", activeTab === 'security' ? "text-brand" : "text-text-secondary")} />
           <span className="text-sm">Controle de Acesso</span>
         </button>
+        <button 
+          onClick={() => setActiveTab('reset')}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3 text-left border-l-4 rounded transition-colors",
+            activeTab === 'reset' 
+              ? "border-danger bg-danger/5 text-danger font-bold" 
+              : "border-transparent text-text-main hover:bg-bg-main font-medium"
+          )}
+        >
+          <Trash2 className={cn("w-5 h-5", activeTab === 'reset' ? "text-danger" : "text-text-secondary")} />
+          <span className="text-sm">Zerar Dados / Início</span>
+        </button>
       </nav>
 
       <div className="flex-1 w-full card p-6 md:p-8 min-h-[500px]">
         {renderContent()}
 
-        {activeTab !== 'clients' && (
+        {activeTab !== 'clients' && activeTab !== 'reset' && (
           <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-border-main">
             <button className="px-4 py-2 text-sm font-semibold text-text-main hover:bg-bg-main rounded-lg transition-colors">
               Cancelar
