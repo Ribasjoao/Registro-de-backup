@@ -725,45 +725,95 @@ export function SettingsView({
               <p className="text-sm text-text-secondary mt-1">Controle quem tem acesso ao sistema e quais são suas permissões.</p>
             </div>
 
-            <div className="border border-border-main rounded-xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-bg-main border-b border-border-main">
-                    <th className="px-4 py-3 text-xs font-bold text-text-secondary uppercase tracking-wider">Email</th>
-                    <th className="px-4 py-3 text-xs font-bold text-text-secondary uppercase tracking-wider">Permissão</th>
-                    <th className="px-4 py-3 text-xs font-bold text-text-secondary uppercase tracking-wider text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-main">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-bg-main transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-text-main">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={cn(
-                          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                          u.role === 'admin' ? "bg-purple-100 text-purple-800 border-purple-200" :
-                          u.role === 'editor' ? "bg-blue-100 text-blue-800 border-blue-200" :
-                          "bg-slate-100 text-slate-800 border-slate-200"
-                        )}>
-                          {u.role === 'admin' ? 'Administrador' : u.role === 'editor' ? 'Editor' : 'Visualizador'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <select 
-                          value={u.role}
-                          onChange={(e) => onUpdateUserRole?.(u.id, e.target.value)}
-                          className="text-xs border border-border-main bg-bg-card text-text-main rounded px-2 py-1 outline-none focus:ring-1 focus:ring-brand"
-                          disabled={u.email === 'joaoribasdossantos@gmail.com'}
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="editor">Editor</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                      </td>
+            <div className="border border-border-main rounded-xl overflow-hidden bg-bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="bg-bg-main border-b border-border-main text-text-secondary select-none">
+                      <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">Usuário</th>
+                      <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">E-mail</th>
+                      <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">XP / Nível</th>
+                      <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">Permissão</th>
+                      <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border-main">
+                    {users.map((u) => {
+                      const userInitials = u.displayName
+                        ? u.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+                        : u.email ? u.email[0].toUpperCase() : 'U';
+
+                      return (
+                        <tr key={u.id} className="hover:bg-bg-main/40 transition-colors">
+                          {/* Usuário (Name & Avatar) */}
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-3">
+                              {u.photoURL ? (
+                                <img 
+                                  src={u.photoURL} 
+                                  alt={u.displayName || 'Usuário'} 
+                                  referrerPolicy="no-referrer"
+                                  className="w-8 h-8 rounded-full border border-border-main object-cover" 
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/20 text-brand flex items-center justify-center font-bold text-xs shrink-0">
+                                  {userInitials}
+                                </div>
+                              )}
+                              <span className="text-sm font-bold text-text-main truncate max-w-[150px]">
+                                {u.displayName || 'Sem Nome'}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Email Column */}
+                          <td className="px-5 py-3.5">
+                            <span className="text-sm font-medium text-text-main font-mono">
+                              {u.email || <span className="text-text-secondary italic">Não informado</span>}
+                            </span>
+                          </td>
+
+                          {/* XP / Level Column */}
+                          <td className="px-5 py-3.5">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-brand">{u.xp !== undefined ? `${u.xp} XP` : '0 XP'}</span>
+                              <span className="text-[10px] text-text-secondary font-medium truncate max-w-[120px]">
+                                {u.level || 'Operador de Snapshot L1'}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Permissions State Column */}
+                          <td className="px-5 py-3.5">
+                            <span className={cn(
+                              "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border",
+                              u.role === 'admin' ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800/50" :
+                              u.role === 'editor' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800/50" :
+                              "bg-slate-100 dark:bg-slate-800/50 text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-800/50"
+                            )}>
+                              {u.role === 'admin' ? 'Administrador' : u.role === 'editor' ? 'Editor' : 'Visualizador'}
+                            </span>
+                          </td>
+
+                          {/* Action Selector */}
+                          <td className="px-5 py-3.5 text-right">
+                            <select 
+                              value={u.role || 'viewer'}
+                              onChange={(e) => onUpdateUserRole?.(u.id, e.target.value)}
+                              className="text-xs border border-border-main bg-bg-card text-text-main rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-brand font-semibold cursor-pointer"
+                              disabled={u.email === 'joaoribasdossantos@gmail.com'}
+                            >
+                              <option value="admin">Administrador</option>
+                              <option value="editor">Editor</option>
+                              <option value="viewer">Visualizador</option>
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         );

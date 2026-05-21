@@ -156,7 +156,7 @@ export default function App() {
             displayName: currentUser.displayName || 'João Ribas',
             photoURL: currentUser.photoURL || undefined,
             xp: 1000,
-            level: 'Mestre do Backup'
+            level: 'SysAdmin Root'
           });
         }
 
@@ -181,29 +181,41 @@ export default function App() {
 
           const userData = {
             uid: currentUser.uid,
-            email: currentUser.email,
+            email: currentUser.email || '',
             role: role,
-            displayName: currentUser.displayName,
-            photoURL: currentUser.photoURL
+            displayName: currentUser.displayName || '',
+            photoURL: currentUser.photoURL || ''
           };
 
           if (!userSnap.exists()) {
-            await setDoc(userRef, userData);
-            setAppUser({ id: currentUser.uid, ...userData } as AppUser);
+            const newUserData = {
+              ...userData,
+              xp: 0,
+              level: 'Operador de Snapshot L1'
+            };
+            await setDoc(userRef, newUserData);
+            setAppUser({ id: currentUser.uid, ...newUserData } as AppUser);
           } else {
-            if (isRoot && userSnap.data().role !== 'admin') {
-              await updateDoc(userRef, { role: 'admin', displayName: currentUser.displayName, photoURL: currentUser.photoURL });
-            } else if (roleFromClaim === 'admin' && userSnap.data().role !== 'admin') {
-              await updateDoc(userRef, { role: 'admin', displayName: currentUser.displayName, photoURL: currentUser.photoURL });
-              role = 'admin';
-            } else {
-              await updateDoc(userRef, { displayName: currentUser.displayName, photoURL: currentUser.photoURL });
+            const existingData = userSnap.data();
+            const updates: any = {
+              email: currentUser.email || existingData.email || '',
+              displayName: currentUser.displayName || existingData.displayName || '',
+              photoURL: currentUser.photoURL || existingData.photoURL || ''
+            };
+
+            if (isRoot && existingData.role !== 'admin') {
+              updates.role = 'admin';
+            } else if (roleFromClaim === 'admin' && existingData.role !== 'admin') {
+              updates.role = 'admin';
             }
-            setAppUser({ id: currentUser.uid, ...userSnap.data(), ...userData, role: isRoot ? 'admin' : role } as AppUser);
+
+            await updateDoc(userRef, updates);
+            setAppUser({ id: currentUser.uid, ...existingData, ...updates, role: updates.role || existingData.role || role } as AppUser);
           }
 
-          setIsAdmin(isRoot || role === 'admin');
-          setIsEditor(isRoot || role === 'admin' || role === 'editor');
+          const finalRole = isRoot ? 'admin' : (userSnap.exists() ? (userSnap.data().role || role) : role);
+          setIsAdmin(isRoot || finalRole === 'admin');
+          setIsEditor(isRoot || finalRole === 'admin' || finalRole === 'editor');
         } catch (error) {
           console.error('Error syncing user profile:', error);
           setIsAdmin(isRoot || isAdminUser);
@@ -306,9 +318,10 @@ export default function App() {
     });
 
     // Listen to Users (For Leaderboard and Admin)
-    const qUsers = query(collection(db, 'users'), orderBy('xp', 'desc'));
+    const qUsers = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
+      data.sort((a, b) => (b.xp || 0) - (a.xp || 0));
       setUsers(data);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
 

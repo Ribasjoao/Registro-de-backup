@@ -1,15 +1,15 @@
 import { db, doc, getDoc, updateDoc, addDoc, collection, handleFirestoreError, OperationType } from '../firebase';
 
 export const LEVEL_RANGES = [
-  { minXp: 0, level: 'Padawan do Backup' },
-  { minXp: 100, level: 'Operador de Guardas' },
-  { minXp: 300, level: 'Especialista em Recuperação' },
-  { minXp: 600, level: 'Arquiteto da Resiliência' },
-  { minXp: 1000, level: 'Mestre do Backup' }
+  { minXp: 0, level: 'Operador de Snapshot L1' },
+  { minXp: 100, level: 'Analista de Retenção & Storage' },
+  { minXp: 300, level: 'Engenheiro de Disaster Recovery' },
+  { minXp: 600, level: 'Arquiteto de Replicação (PBS / S3)' },
+  { minXp: 1000, level: 'SysAdmin Root' }
 ];
 
 export function getLevelForXP(xp: number): string {
-  let level = 'Padawan do Backup';
+  let level = 'Operador de Snapshot L1';
   for (const range of LEVEL_RANGES) {
     if (xp >= range.minXp) {
       level = range.level;
