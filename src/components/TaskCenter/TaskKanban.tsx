@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import confetti from 'canvas-confetti';
 import { 
   DndContext, 
   DragOverlay, 
@@ -94,6 +95,18 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
         status: targetStatus,
         completed: targetStatus === 'done'
       });
+
+      if (targetStatus === 'done') {
+        try {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        } catch (e) {
+          console.error("Confetti error:", e);
+        }
+      }
     }
   };
 

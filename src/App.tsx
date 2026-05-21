@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { awardXP } from './lib/xpService';
 import { motion } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -68,6 +69,14 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditor, setIsEditor] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  const isRootUser = user?.email === 'joaoribasdossantos@gmail.com';
+  const displayRole = isRootUser ? 'admin' : (appUser?.role || 'viewer');
+
+  const effectiveIsAdmin = isRootUser || isAdmin;
+  const effectiveIsEditor = isRootUser || isEditor;
+
+  const hasGeneratedToday = useRef(false);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -133,10 +142,28 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        const isRoot = currentUser.email === 'joaoribasdossantos@gmail.com';
+        
+        // Immediate synchronous state bypass
+        if (isRoot) {
+          setIsAdmin(true);
+          setIsEditor(true);
+          setAppUser({
+            id: currentUser.uid,
+            uid: currentUser.uid,
+            email: currentUser.email || 'joaoribasdossantos@gmail.com',
+            role: 'admin',
+            displayName: currentUser.displayName || 'João Ribas',
+            photoURL: currentUser.photoURL || undefined,
+            xp: 1000,
+            level: 'Mestre do Backup'
+          });
+        }
+
         // Check for custom claims (RBAC)
         const tokenResult = await getIdTokenResult(currentUser);
-        const roleFromClaim = tokenResult.claims.role as string || 'viewer';
-        const isAdminUser = roleFromClaim === 'admin';
+        const roleFromClaim = tokenResult.claims.role as string || (isRoot ? 'admin' : 'viewer');
+        const isAdminUser = roleFromClaim === 'admin' || isRoot;
         const isEditorUser = roleFromClaim === 'editor' || isAdminUser;
 
         setIsAdmin(isAdminUser);
@@ -147,11 +174,9 @@ export default function App() {
           const userRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userRef);
           
-          let role = roleFromClaim;
+          let role = isRoot ? 'admin' : roleFromClaim;
           if (userSnap.exists()) {
-            // If the document has a different role, we might want to sync it, 
-            // but the claim is the source of truth for security rules.
-            role = userSnap.data().role || role;
+            role = isRoot ? 'admin' : (userSnap.data().role || role);
           }
 
           const userData = {
@@ -166,29 +191,28 @@ export default function App() {
             await setDoc(userRef, userData);
             setAppUser({ id: currentUser.uid, ...userData } as AppUser);
           } else {
-            if (roleFromClaim === 'admin' && userSnap.data().role !== 'admin') {
-              // Ensure the admin claim always has admin role in Firestore
+            if (isRoot && userSnap.data().role !== 'admin') {
+              await updateDoc(userRef, { role: 'admin', displayName: currentUser.displayName, photoURL: currentUser.photoURL });
+            } else if (roleFromClaim === 'admin' && userSnap.data().role !== 'admin') {
               await updateDoc(userRef, { role: 'admin', displayName: currentUser.displayName, photoURL: currentUser.photoURL });
               role = 'admin';
             } else {
-              // Update display name and photo if they changed
               await updateDoc(userRef, { displayName: currentUser.displayName, photoURL: currentUser.photoURL });
             }
-            setAppUser({ id: currentUser.uid, ...userSnap.data(), ...userData, role } as AppUser);
+            setAppUser({ id: currentUser.uid, ...userSnap.data(), ...userData, role: isRoot ? 'admin' : role } as AppUser);
           }
 
-          setIsAdmin(role === 'admin');
-          setIsEditor(role === 'admin' || role === 'editor');
+          setIsAdmin(isRoot || role === 'admin');
+          setIsEditor(isRoot || role === 'admin' || role === 'editor');
         } catch (error) {
           console.error('Error syncing user profile:', error);
-          // Fallback to claims if Firestore fails
-          setIsAdmin(isAdminUser);
-          setIsEditor(isEditorUser);
+          setIsAdmin(isRoot || isAdminUser);
+          setIsEditor(isRoot || isEditorUser);
           setAppUser({
             id: currentUser.uid,
             uid: currentUser.uid,
             email: currentUser.email || '',
-            role: roleFromClaim as 'admin' | 'editor' | 'viewer',
+            role: isRoot ? 'admin' : (roleFromClaim as any),
             displayName: currentUser.displayName || undefined,
             photoURL: currentUser.photoURL || undefined
           });
@@ -197,6 +221,7 @@ export default function App() {
         setIsAdmin(false);
         setIsEditor(false);
         setAppUser(null);
+        hasGeneratedToday.current = false;
       }
       setIsAuthReady(true);
     });
@@ -205,20 +230,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user && tasks.length > 0) {
-      const newRecurrent = generateRecurrentTasks(tasks, user.uid);
-      if (newRecurrent.length > 0) {
-        newRecurrent.forEach(async (t) => {
-          // Identify the original template to update its lastGenerated
-          const template = tasks.find(exist => exist.title === t.title && exist.recurrence?.type === t.recurrence?.type && exist.source === 'manual');
-          if (template) {
-            await updateTask(template.id, { 
-              recurrence: { ...template.recurrence!, lastGenerated: new Date().toISOString().split('T')[0] } 
-            });
-            await addTask(t);
-          }
-        });
-      }
+    if (!user || tasks.length === 0 || hasGeneratedToday.current) return;
+
+    hasGeneratedToday.current = true;
+    const newRecurrent = generateRecurrentTasks(tasks, user.uid);
+    if (newRecurrent.length > 0) {
+      newRecurrent.forEach(async (t) => {
+        // Identify the original template to update its lastGenerated
+        const template = tasks.find(exist => exist.title === t.title && exist.recurrence?.type === t.recurrence?.type && exist.source === 'manual');
+        if (template) {
+          await updateTask(template.id, { 
+            recurrence: { ...template.recurrence!, lastGenerated: new Date().toISOString().split('T')[0] } 
+          });
+          await addTask(t);
+        }
+      });
     }
   }, [user, tasks.length]);
 
@@ -226,9 +252,15 @@ export default function App() {
     if (!user) return;
 
     // Listen to current user document for real-time XP updates
-    const unsubscribeUser = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        setAppUser({ id: doc.id, ...doc.data() } as AppUser);
+    const unsubscribeUser = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+      if (snapshot.exists()) {
+        const isRoot = user.email === 'joaoribasdossantos@gmail.com';
+        const data = snapshot.data();
+        setAppUser({ 
+          id: snapshot.id, 
+          ...data,
+          role: isRoot ? 'admin' : (data?.role || 'viewer')
+        } as AppUser);
       }
     });
 
@@ -271,7 +303,6 @@ export default function App() {
       setTasks(data);
     }, (error) => {
       console.error("Firestore Tasks Listener Error:", error);
-      // Don't throw here to keep the listener alive if possible
     });
 
     // Listen to Users (For Leaderboard and Admin)
@@ -290,10 +321,10 @@ export default function App() {
       unsubscribeTasks();
       unsubscribeUsers();
     };
-  }, [user]);
+  }, [user?.uid]);
 
   const addClient = async (name: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await addDoc(collection(db, 'clients'), {
         name,
@@ -305,7 +336,7 @@ export default function App() {
   };
 
   const updateClient = async (updatedClient: Client) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       const { id, ...data } = updatedClient;
       await updateDoc(doc(db, 'clients', id), data);
@@ -315,7 +346,7 @@ export default function App() {
   };
 
   const deleteClient = async (id: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await deleteDoc(doc(db, 'clients', id));
     } catch (error) {
@@ -324,7 +355,7 @@ export default function App() {
   };
 
   const addBackup = async (backup: Omit<BackupRecord, 'id'>) => {
-    if (!isEditor) return;
+    if (!effectiveIsEditor) return;
     try {
       const docRef = await addDoc(collection(db, 'backups'), backup);
       
@@ -348,7 +379,7 @@ export default function App() {
   };
 
   const updateBackup = async (updatedBackup: BackupRecord) => {
-    if (!isEditor) return;
+    if (!effectiveIsEditor) return;
     try {
       const { id, ...data } = updatedBackup;
       await updateDoc(doc(db, 'backups', id), data);
@@ -358,7 +389,7 @@ export default function App() {
   };
 
   const updateDestination = async (updatedDest: StorageDestination) => {
-    if (!isEditor) return;
+    if (!effectiveIsEditor) return;
     try {
       const { id, ...data } = updatedDest;
       await updateDoc(doc(db, 'destinations', id), data);
@@ -368,7 +399,7 @@ export default function App() {
   };
 
   const addDestination = async (destination: Omit<StorageDestination, 'id'>) => {
-    if (!isEditor) return;
+    if (!effectiveIsEditor) return;
     try {
       await addDoc(collection(db, 'destinations'), destination);
     } catch (error) {
@@ -377,7 +408,7 @@ export default function App() {
   };
 
   const deleteDestination = async (id: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await deleteDoc(doc(db, 'destinations', id));
     } catch (error) {
@@ -386,7 +417,7 @@ export default function App() {
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
     } catch (error) {
@@ -395,7 +426,7 @@ export default function App() {
   };
 
   const addBackupType = async (name: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await addDoc(collection(db, 'backup_types'), { name });
     } catch (error) {
@@ -404,7 +435,7 @@ export default function App() {
   };
 
   const updateBackupType = async (updatedType: BackupType) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       const { id, ...data } = updatedType;
       await updateDoc(doc(db, 'backup_types', id), data);
@@ -414,7 +445,7 @@ export default function App() {
   };
 
   const deleteBackupType = async (id: string) => {
-    if (!isAdmin) return;
+    if (!effectiveIsAdmin) return;
     try {
       await deleteDoc(doc(db, 'backup_types', id));
     } catch (error) {
@@ -454,21 +485,45 @@ export default function App() {
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
+      const task = tasks.find(t => t.id === id);
+      const isFinishing = (updates.completed === true && !task?.completed) || 
+                          (updates.status === 'done' && task?.status !== 'done');
+
       await updateDoc(doc(db, 'tasks', id), { ...updates, updatedAt: new Date().toISOString() });
+
+      if (isFinishing && user && task) {
+        let xpAwarded = 10;
+        let reason = `Concluiu a tarefa: ${task.title}`;
+
+        const isGolden = updates.isGolden !== undefined ? updates.isGolden : task.isGolden;
+        const important = updates.important !== undefined ? updates.important : task.important;
+        const duration = updates.duration !== undefined ? updates.duration : task.duration;
+
+        if (isGolden) {
+          xpAwarded = 50;
+          reason = `Concluiu a Tarefa de Ouro: ${task.title}`;
+        } else if (important) {
+          xpAwarded = 25;
+          reason = `Concluiu a tarefa importante: ${task.title}`;
+        }
+
+        if (duration && duration > 60) {
+          xpAwarded += 15;
+          reason += ' (Bônus de foco/duração)';
+        }
+
+        await awardXP(user.uid, xpAwarded, reason);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
   };
 
   const toggleTask = async (id: string, completed: boolean) => {
-    try {
-      await updateDoc(doc(db, 'tasks', id), { 
-        completed,
-        status: completed ? 'done' : 'doing'
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
-    }
+    await updateTask(id, { 
+      completed,
+      status: completed ? 'done' : 'doing'
+    });
   };
 
   const toggleImportant = async (id: string, important: boolean) => {
@@ -504,7 +559,7 @@ export default function App() {
         const tasksSnapshot = await getDocs(qTasks);
         const taskDeletePromises = tasksSnapshot.docs.map(docRef => deleteDoc(doc(db, 'tasks', docRef.id)));
         await Promise.all(taskDeletePromises);
-      } else if (resetType === 'system' && isAdmin && systemOptions) {
+      } else if (resetType === 'system' && effectiveIsAdmin && systemOptions) {
         const { deleteBackups, deleteClients, deleteDestinations, clientNameFilter } = systemOptions;
 
         // 1. Apagar backups registrados (com ou sem filtro por cliente)
@@ -541,7 +596,7 @@ export default function App() {
   };
 
   const openEditBackup = (backup: BackupRecord) => {
-    if (!isEditor) return;
+    if (!effectiveIsEditor) return;
     setEditingBackup(backup);
     setIsModalOpen(true);
   };
@@ -598,7 +653,7 @@ export default function App() {
     { id: 'tasks', label: 'Tarefas', icon: LayoutList },
     { id: 'destinations', label: 'Destinos', icon: Database },
     { id: 'reports', label: 'Relatórios IA', icon: Sparkles },
-    ...(isAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings }] : []),
+    ...(effectiveIsAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings }] : []),
   ];
 
   const renderView = () => {
@@ -608,7 +663,7 @@ export default function App() {
       case 'weekly':
         return <WeeklyExecutiveView backups={backups} tasks={tasks} />;
       case 'records':
-        return <RecordsView backups={backups} onEdit={isEditor ? openEditBackup : undefined} />;
+        return <RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} />;
       case 'tasks':
         return (
           <TaskCenter 
@@ -620,7 +675,7 @@ export default function App() {
           />
         );
       case 'destinations':
-        return <DestinationsView destinations={destinations} clients={clients} onUpdate={isEditor ? updateDestination : async () => {}} onAdd={isEditor ? addDestination : async () => {}} onDelete={isAdmin ? deleteDestination : () => {}} isAdmin={isEditor} />;
+        return <DestinationsView destinations={destinations} clients={clients} onUpdate={effectiveIsEditor ? updateDestination : async () => {}} onAdd={effectiveIsEditor ? addDestination : async () => {}} onDelete={effectiveIsAdmin ? deleteDestination : () => {}} isAdmin={effectiveIsEditor} />;
       case 'reports':
         return <ReportsView backups={backups} />;
       case 'settings':
@@ -640,7 +695,7 @@ export default function App() {
             onAddBackupType={addBackupType}
             onUpdateBackupType={updateBackupType}
             onDeleteBackupType={deleteBackupType}
-            isAdmin={isAdmin}
+            isAdmin={effectiveIsAdmin}
             onResetData={handleResetData}
           />
         );
@@ -698,7 +753,7 @@ export default function App() {
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
                   <span className="text-xs text-brand truncate flex items-center gap-1 uppercase tracking-wider font-semibold">
-                    {appUser?.role === 'admin' ? 'Administrador' : appUser?.role === 'editor' ? 'Editor' : 'Visualizador'}
+                    {displayRole === 'admin' ? 'Administrador' : displayRole === 'editor' ? 'Editor' : 'Visualizador'}
                   </span>
                 </div>
               </div>
@@ -757,7 +812,7 @@ export default function App() {
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
               </button>
-              {isEditor && (
+              {effectiveIsEditor && (
                 <button 
                   onClick={() => setIsModalOpen(true)}
                   className="bg-brand hover:bg-brand-dark text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-sm active:scale-95"
@@ -790,7 +845,7 @@ export default function App() {
         </div>
       </main>
 
-      {isEditor && (
+      {effectiveIsEditor && (
         <RegisterBackupModal 
           isOpen={isModalOpen} 
           onClose={handleCloseModal} 

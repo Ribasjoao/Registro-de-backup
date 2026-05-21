@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   AlertTriangle, 
@@ -9,7 +9,10 @@ import {
   Calendar,
   User,
   Tags,
-  RefreshCw
+  RefreshCw,
+  Crown,
+  Play,
+  Pause
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Task } from '../../types';
@@ -28,10 +31,49 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
   
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
 
+  // Pomodoro Focus Mode Local Timer
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  useEffect(() => {
+    if (task.status === 'doing' && task.duration && task.duration > 0) {
+      if (secondsLeft === null) {
+        setSecondsLeft(task.duration * 60);
+      }
+    } else {
+      setSecondsLeft(null);
+      setIsTimerRunning(false);
+    }
+  }, [task.status, task.duration]);
+
+  useEffect(() => {
+    if (!isTimerRunning || secondsLeft === null || secondsLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      setSecondsLeft(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          setIsTimerRunning(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning, secondsLeft]);
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainder = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div 
       className={cn(
         "group relative bg-bg-card border border-border-main rounded-xl p-4 hover:shadow-lg hover:border-brand/30 transition-all cursor-pointer",
+        task.isGolden && "border-amber-400 dark:border-amber-400/50 bg-amber-500/[0.04] dark:bg-amber-400/[0.02] hover:border-amber-400 hover:shadow-amber-500/5",
         task.status === 'done' && "opacity-60",
         task.status === 'blocked' && "border-danger/30 bg-danger/[0.02]",
         task.status === 'waiting' && "border-warning/30 bg-warning/[0.02]"
@@ -39,7 +81,7 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
       onClick={() => onEditTask(task)}
     >
       <div className="flex flex-col gap-3">
-        {/* Header: Status & Priority */}
+        {/* Header: Status & Priority WITH Golden Task Button */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <button 
@@ -71,10 +113,48 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
             </div>
           </div>
 
-          <div className={cn("flex-shrink-0 text-[10px] font-black uppercase tracking-widest", priority?.color)}>
-            {priority?.label}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateTask(task.id, { isGolden: !task.isGolden });
+              }}
+              className={cn(
+                "p-1 rounded hover:bg-bg-main transition-colors",
+                task.isGolden ? "text-amber-500" : "text-text-secondary opacity-30 group-hover:opacity-100"
+              )}
+              title={task.isGolden ? "Remover destaque de Tarefa de Ouro" : "Marcar como Tarefa de Ouro"}
+            >
+              <Crown className={cn("w-4 h-4", task.isGolden && "fill-amber-500 text-amber-500 animate-pulse")} />
+            </button>
+            <div className={cn("text-[10px] font-black uppercase tracking-widest", priority?.color)}>
+              {priority?.label}
+            </div>
           </div>
         </div>
+
+        {/* Focus Mode Countdown Display */}
+        {task.status === 'doing' && task.duration && task.duration > 0 && secondsLeft !== null && (
+          <div 
+            className="mt-1 flex items-center justify-between bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/25 rounded-lg px-3 py-2 text-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                className="p-1 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors flex items-center justify-center cursor-pointer"
+              >
+                {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-white" />}
+              </button>
+              <span className="font-mono font-bold text-amber-600 dark:text-amber-400 animate-pulse">
+                {formatTime(secondsLeft)}
+              </span>
+            </div>
+            <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Modo Foco
+            </span>
+          </div>
+        )}
 
         {/* Info Rows */}
         {!compact && (
