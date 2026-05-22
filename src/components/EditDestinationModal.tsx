@@ -20,6 +20,7 @@ export function EditDestinationModal({ isOpen, onClose, onSave, destination, cli
   const [savingsTB, setSavingsTB] = useState('');
   const [backupsCount, setBackupsCount] = useState('');
   const [location, setLocation] = useState<'Local' | 'S3' | 'Cloud'>('Local');
+  const [isCustomClient, setIsCustomClient] = useState(false);
 
   useEffect(() => {
     if (destination) {
@@ -84,18 +85,43 @@ export function EditDestinationModal({ isOpen, onClose, onSave, destination, cli
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-text-main mb-1">Cliente</label>
-              <select
-                value={client}
-                onChange={(e) => setClient(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-                required
-              >
-                <option value="">Selecione...</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-semibold text-text-main">Cliente</label>
+                {clients.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClient('');
+                      setIsCustomClient(!isCustomClient);
+                    }}
+                    className="text-xs font-semibold text-brand hover:underline"
+                  >
+                    {isCustomClient ? 'Selecionar' : 'Digitar Novo'}
+                  </button>
+                )}
+              </div>
+              {clients.length === 0 || isCustomClient ? (
+                <input
+                  type="text"
+                  value={client}
+                  onChange={(e) => setClient(e.target.value)}
+                  placeholder="Nome do cliente"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                  required
+                />
+              ) : (
+                <select
+                  value={client}
+                  onChange={(e) => setClient(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 

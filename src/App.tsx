@@ -499,18 +499,35 @@ export default function App() {
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
       const task = tasks.find(t => t.id === id);
-      const isFinishing = (updates.completed === true && !task?.completed) || 
-                          (updates.status === 'done' && task?.status !== 'done');
+      if (!task) return;
 
-      await updateDoc(doc(db, 'tasks', id), { ...updates, updatedAt: new Date().toISOString() });
+      const { id: _, ...cleanUpdates } = updates;
 
-      if (isFinishing && user && task) {
+      // Ensure status and completed stay in sync
+      if (cleanUpdates.status === 'done') {
+        cleanUpdates.completed = true;
+      } else if (cleanUpdates.status !== undefined) {
+        cleanUpdates.completed = false;
+      } else if (cleanUpdates.completed === true) {
+        cleanUpdates.status = 'done';
+      } else if (cleanUpdates.completed === false) {
+        if (task.status === 'done') {
+          cleanUpdates.status = 'inbox';
+        }
+      }
+
+      const isFinishing = (cleanUpdates.completed === true && !task.completed) || 
+                          (cleanUpdates.status === 'done' && task.status !== 'done');
+
+      await updateDoc(doc(db, 'tasks', id), { ...cleanUpdates, updatedAt: new Date().toISOString() });
+
+      if (isFinishing && user) {
         let xpAwarded = 10;
         let reason = `Concluiu a tarefa: ${task.title}`;
 
-        const isGolden = updates.isGolden !== undefined ? updates.isGolden : task.isGolden;
-        const important = updates.important !== undefined ? updates.important : task.important;
-        const duration = updates.duration !== undefined ? updates.duration : task.duration;
+        const isGolden = cleanUpdates.isGolden !== undefined ? cleanUpdates.isGolden : task.isGolden;
+        const important = cleanUpdates.important !== undefined ? cleanUpdates.important : task.important;
+        const duration = cleanUpdates.duration !== undefined ? cleanUpdates.duration : task.duration;
 
         if (isGolden) {
           xpAwarded = 50;

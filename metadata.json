@@ -1,5 +1,8 @@
 {
   "name": "Registro de Backup",
   "description": "Sistema completo para monitoramento, registro e configuração de backups corporativos com dashboard em tempo real.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

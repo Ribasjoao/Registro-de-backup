@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   CalendarDays,
   Presentation,
-  Flag
+  Flag,
+  Inbox
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Task } from '../../types';
@@ -33,8 +34,9 @@ export function TaskMyDay({ tasks, onUpdateTask, onEditTask, onAddNew }: TaskMyD
     const waiting = tasks.filter(t => t.status === 'waiting');
     const followup = tasks.filter(t => t.status !== 'done' && t.type === 'follow_up');
     const presentation = tasks.filter(t => t.type === 'apresentacao' || t.tags?.includes('apresentação'));
+    const inbox = tasks.filter(t => t.status === 'inbox');
 
-    return { overdue, critical, today, blocked, waiting, followup, presentation };
+    return { overdue, critical, today, blocked, waiting, followup, presentation, inbox };
   }, [tasks]);
 
   const hasUrgent = sections.overdue.length > 0 || sections.critical.length > 0;
@@ -96,6 +98,46 @@ export function TaskMyDay({ tasks, onUpdateTask, onEditTask, onAddNew }: TaskMyD
             )}
           </div>
         </section>
+
+        {/* Caixa de Entrada (Inbox) */}
+        {sections.inbox.length > 0 && (
+          <section className="bg-bg-card border border-border-main rounded-3xl p-8 shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <Inbox className="w-5 h-5 text-indigo-500 animate-pulse" />
+                <h2 className="text-xl font-bold text-text-main">Caixa de Entrada (Inbox)</h2>
+              </div>
+              <span className="text-xs text-indigo-500 font-bold bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-xl uppercase tracking-widest">
+                {sections.inbox.length} {sections.inbox.length === 1 ? 'pendente' : 'pendentes'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sections.inbox.map(task => (
+                <div key={task.id} className="relative group">
+                  <TaskItem 
+                    task={task} 
+                    onUpdateTask={onUpdateTask} 
+                    onEditTask={onEditTask} 
+                    compact
+                  />
+                  <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpdateTask(task.id, { status: 'today' });
+                      }}
+                      className="px-2.5 py-1.5 text-[9px] font-black uppercase text-indigo-500 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-colors cursor-pointer"
+                      title="Mover tarefa para a fila de hoje"
+                    >
+                      Mover p/ Hoje
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Incidents & Follow-ups */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

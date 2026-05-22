@@ -22,6 +22,7 @@ import { Plus, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Task, TaskStatus } from '../../types';
 import { TaskItem } from './TaskItem';
+import { SortableTask } from './SortableTask';
 import { TASK_STATUSES } from '../../lib/taskService';
 
 interface TaskKanbanProps {
@@ -127,12 +128,11 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
             >
               <div className="flex flex-col gap-3 min-h-[100px]">
                 {tasksByStatus[status.value as TaskStatus].map(task => (
-                  <TaskItem 
+                  <SortableTask 
                     key={task.id} 
                     task={task} 
                     onUpdateTask={onUpdateTask} 
                     onEditTask={onEditTask}
-                    compact
                   />
                 ))}
               </div>

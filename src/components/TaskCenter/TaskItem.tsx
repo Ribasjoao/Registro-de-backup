@@ -39,6 +39,7 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
     if (task.status === 'doing' && task.duration && task.duration > 0) {
       if (secondsLeft === null) {
         setSecondsLeft(task.duration * 60);
+        setIsTimerRunning(true);
       }
     } else {
       setSecondsLeft(null);

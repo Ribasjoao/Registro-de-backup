@@ -26,6 +26,7 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
   const [error, setError] = useState('');
   const [rawLog, setRawLog] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCustomClient, setIsCustomClient] = useState(false);
 
   // Executive fields
   const [criticality, setCriticality] = useState<Criticality>('medium');
@@ -145,20 +146,46 @@ export function RegisterBackupModal({ isOpen, onClose, clients, backupTypes, onS
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Cliente */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
-              <Building2 className="w-4 h-4 text-muted" />
-              Cliente
-            </label>
-            <select 
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border-main bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-            >
-              <option value="">Selecione o cliente...</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm font-semibold text-text-main">
+                <Building2 className="w-4 h-4 text-muted" />
+                Cliente
+              </label>
+              {clients.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClient('');
+                    // We can use a temporary state, but let's toggle by checking a custom condition or just switching to text input if needed.
+                    // Instead of a separate state, let's just make it a toggle button that toggles `isCustomClient` mode.
+                    setIsCustomClient(!isCustomClient);
+                  }}
+                  className="text-xs font-semibold text-brand hover:underline"
+                >
+                  {isCustomClient ? 'Selecionar da Lista' : 'Digitar Novo'}
+                </button>
+              )}
+            </div>
+            {clients.length === 0 || isCustomClient ? (
+              <input
+                type="text"
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+                placeholder="Digite o nome do novo cliente..."
+                className={`w-full h-10 px-3 rounded-lg border ${error && !client ? 'border-danger' : 'border-border-main'} bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all`}
+              />
+            ) : (
+              <select 
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+                className={`w-full h-10 px-3 rounded-lg border ${error && !client ? 'border-danger' : 'border-border-main'} bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all`}
+              >
+                <option value="">Selecione o cliente...</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Título */}
