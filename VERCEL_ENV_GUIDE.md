@@ -1,6 +1,6 @@
-# 🛡️ Guia de Variáveis de Ambiente e Deploy na Vercel — Gate7 Mono-Ecossistema
+# 🛡️ Guia de Variáveis de Ambiente e Deploy na Vercel — Registro de Backup
 
-Este guia orienta sobre como configurar as variáveis de ambiente, manter o repositório unificado (Monorepo) seguro no GitHub e realizar o deploy gratuito do frontend do **Gate7** na Vercel integrado à sua infraestrutura atual de **Firebase/Firestore** e **Cloud Functions (Node.js)**.
+Este guia orienta sobre como configurar as variáveis de ambiente, manter o repositório unificado (Monorepo) seguro no GitHub e realizar o deploy gratuito do frontend do **Registro de Backup** na Vercel integrado à sua infraestrutura atual de **Firebase/Firestore** e **Cloud Functions (Node.js)**.
 
 ---
 
@@ -53,7 +53,7 @@ firebase functions:config:set gemini.key="SUA_CHAVE_PRIVADA_AQUI"
 
 ## 🌐 3. Configurando Variáveis de Ambiente no Painel do Vercel
 
-O frontend do Gate7 hospedado de forma estática e gratuita na Vercel obterá suas credenciais de conexão dinamicamente a partir das **Environment Variables** configuradas no painel.
+O frontend do Registro de Backup hospedado de forma estática e gratuita na Vercel obterá suas credenciais de conexão dinamicamente a partir das **Environment Variables** configuradas no painel.
 
 Ao importar seu repositório na Vercel:
 1. Acesse **Settings** > **Environment Variables** no projeto criado no Vercel.
@@ -82,7 +82,7 @@ Faça push de todo o ecossistema para o seu GitHub unificado (com `.env` oculto)
 ### Passo B: Conectar o Projeto na Vercel
 1. Acesse [vercel.com](https://vercel.com) e conecte sua conta do GitHub.
 2. Clique em **Add New...** -> **Project**.
-3. Importe o repositório do Gate7.
+3. Importe o repositório do Registro de Backup.
 
 ### Passo C: Configurações de Build na Vercel
 Nas opções de Build do projeto, a Vercel detectará e preencherá automaticamente:
@@ -95,4 +95,4 @@ Nas opções de Build do projeto, a Vercel detectará e preencherá automaticame
 1. Expanda a seção **Environment Variables** e insira as variáveis cadastradas na tabela do item 3.
 2. Clique em **Deploy**!
 
-A Vercel compilará o build estático otimizado do React com Vite e publicará em um link amigável, rápido e do plano gratuito como `https://gate7.vercel.app`. Todos os acessos de dados e chamadas de relatórios com o Gemini viajarão direto para as suas Cloud Functions do seu Firebase estabelecido de modo fluido e responsivo!
+A Vercel compilará o build estático otimizado do React com Vite e publicará em um link amigável, rápido e do plano gratuito como `https://registro-de-backup.vercel.app`. Todos os acessos de dados e chamadas de relatórios com o Gemini viajarão direto para as suas Cloud Functions do seu Firebase estabelecido de modo fluido e responsivo!

@@ -1,6 +1,6 @@
-# 🚀 Deploy Gratuito no Vercel - Gate7
+# 🚀 Deploy Gratuito no Vercel - Registro de Backup
 
-O **Gate7** é uma aplicação construída com **React**, **Vite** e **TypeScript**, conectando-se diretamente ao **Firebase/Firestore** no client-side para manter toda a sincronização em tempo real e reações instantâneas.
+O **Registro de Backup** é uma aplicação construída com **React**, **Vite** e **TypeScript**, conectando-se diretamente ao **Firebase/Firestore** no client-side para manter toda a sincronização em tempo real e reações instantâneas.
 
 Como o Vercel oferece hospedagem estática nativa otimizada para o ecossistema Vite/React **totalmente sem custo (Hobby Plan)**, **não é necessária nenhuma estrutura de backend complexa (como Flask ou containers do Cloud Run)** para expor seu painel e registros! Toda a lógica de dados já é processada de modo serverless direto no Firebase.
 
@@ -31,7 +31,7 @@ Para garantir que suas chaves do Firebase e do Gemini permaneçam seguras e ocul
 ### Passo B: Conectar à Vercel
 1. Acesse [vercel.com](https://vercel.com) e crie uma conta gratuita (caso ainda não possua).
 2. Clique em **Add New...** e selecione **Project**.
-3. Importe o repositório do GitHub criado para o Gate7.
+3. Importe o repositório do GitHub criado para o Registro de Backup.
 
 ### Passo C: Configuração do Projeto no Painel da Vercel
 O Vercel detectará automaticamente que este é um projeto **Vite**.
@@ -61,7 +61,7 @@ Adicione os seguintes nomes e seus respectivos valores:
 Configuramos o arquivo `vercel.json` na raiz da seguinte forma:
 ```json
 {
-  "name": "gate-7",
+  "name": "registro-de-backup",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -72,4 +72,4 @@ Configuramos o arquivo `vercel.json` na raiz da seguinte forma:
 ```
 Isso garante que, ao usar abas complexas, relatórios ou atualizar a página direto em sub-rotas como `/records`, o sistema do Vercel redirecione internamente para o roteamento inteligente do React no lado do cliente, evitando o erro `404 Not Found` típico de SPAs!
 
-E prontinho! Seu Gate7 estará online instantaneamente com um domínio amigável `https://gate7.vercel.app` (ou semelhante) e com zero custos!
+E prontinho! Seu Registro de Backup estará online instantaneamente com um domínio amigável `https://registro-de-backup.vercel.app` (ou semelhante) e com zero custos!

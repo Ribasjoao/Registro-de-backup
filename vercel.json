@@ -1,5 +1,5 @@
 {
-  "name": "gate-7",
+  "name": "registro-de-backup",
   "rewrites": [
     {
       "source": "/(.*)",
