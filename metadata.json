@@ -1,5 +1,5 @@
 {
-  "name": "Gate7 - Gerenciamento de Backups",
+  "name": "Registro de Backup",
   "description": "Sistema completo para monitoramento, registro e configuração de backups corporativos com dashboard em tempo real.",
   "requestFramePermissions": []
 }

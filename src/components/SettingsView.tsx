@@ -588,7 +588,7 @@ export function SettingsView({
                         Limpeza Customizada e Reset do Painel
                       </h3>
                       <p className="text-sm text-text-secondary mb-4">
-                        <span className="font-bold text-danger">Apenas para Administradores.</span> Selecione precisamente o que deseja limpar do banco de dados do Gate7. Você pode, por exemplo, apagar apenas os registros de backups sem afetar os clientes já criados.
+                        <span className="font-bold text-danger">Apenas para Administradores.</span> Selecione precisamente o que deseja limpar do banco de dados do Registro de Backup. Você pode, por exemplo, apagar apenas os registros de backups sem afetar os clientes já criados.
                       </p>
 
                       {/* Opções de Filtro de Limpeza */}

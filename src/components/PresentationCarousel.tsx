@@ -95,7 +95,7 @@ export function PresentationCarousel({ backups, onClose }: PresentationCarouselP
           </div>
           <div>
             <h1 className="text-2xl font-heading font-black tracking-tight text-white uppercase">Relatório Executivo</h1>
-            <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Últimos 7 Dias • Gate7 Infrastructure</p>
+            <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Últimos 7 Dias • Registro de Backup</p>
           </div>
         </div>
 
