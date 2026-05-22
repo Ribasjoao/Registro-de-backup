@@ -74,10 +74,10 @@ service cloud.firestore {
              (!('technicalAnalysis' in data) || data.technicalAnalysis == null || (data.technicalAnalysis is string && data.technicalAnalysis.size() < 5000)) &&
              (!('actionPlan' in data) || data.actionPlan == null || (data.actionPlan is string && data.actionPlan.size() < 5000)) &&
              (!('backupType' in data) || data.backupType == null || (data.backupType is string && data.backupType.size() < 100)) &&
-             (!('criticality' in data) || data.criticality == null || data.criticality in ["Muito Alta", "Alta", "Média", "Baixa"]) &&
-             (!('rootCause' in data) || data.rootCause == null || data.rootCause in ["Hardware", "Software", "Rede", "Humano", "Configuração", "Terceiro"]) &&
-             (!('impact' in data) || data.impact == null || data.impact in ["Total", "Parcial", "Mínimo", "Nenhum"]) &&
-             (!('treatmentStatus' in data) || data.treatmentStatus == null || data.treatmentStatus in ["Pendente", "Em Análise", "Em Correção", "Validando", "Resolvido"]) &&
+             (!('criticality' in data) || data.criticality == null || data.criticality in ["low", "medium", "high", "critical"]) &&
+             (!('rootCause' in data) || data.rootCause == null || data.rootCause in ["network", "storage", "credential", "service", "window", "human", "other"]) &&
+             (!('impact' in data) || data.impact == null || data.impact in ["low", "medium", "high"]) &&
+             (!('treatmentStatus' in data) || data.treatmentStatus == null || data.treatmentStatus in ["pending", "analyzing", "mitigated", "resolved"]) &&
              (!('actionDeadline' in data) || data.actionDeadline == null || data.actionDeadline is string) &&
              (!('recurrence' in data) || data.recurrence == null || data.recurrence is bool) &&
              (!('responsibleTreatment' in data) || data.responsibleTreatment == null || data.responsibleTreatment is string);
@@ -127,7 +127,7 @@ service cloud.firestore {
     }
 
     function isValidTask(data) {
-      return hasOnlyAllowedFields(['title', 'description', 'completed', 'createdAt', 'updatedAt', 'userId', 'dueDate', 'slaDate', 'important', 'tags', 'status', 'type', 'priority', 'duration', 'relatedBackupId', 'relatedClient', 'relatedRecordTitle', 'owner', 'blockedReason', 'source', 'recurrence', 'checklist']) &&
+      return hasOnlyAllowedFields(['title', 'description', 'completed', 'createdAt', 'updatedAt', 'userId', 'dueDate', 'slaDate', 'important', 'tags', 'status', 'type', 'priority', 'duration', 'relatedBackupId', 'relatedClient', 'relatedRecordTitle', 'owner', 'blockedReason', 'source', 'recurrence', 'checklist', 'notes', 'isGolden']) &&
              data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
              data.completed is bool &&
              data.createdAt is string &&
@@ -137,6 +137,8 @@ service cloud.firestore {
              data.priority in ["low", "medium", "high", "critical"] &&
              data.owner is string &&
              (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 2000)) &&
+             (!('notes' in data) || data.notes == null || (data.notes is string && data.notes.size() < 5000)) &&
+             (!('isGolden' in data) || data.isGolden == null || data.isGolden is bool) &&
              (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is string) &&
              (!('dueDate' in data) || data.dueDate == null || data.dueDate is string) &&
              (!('slaDate' in data) || data.slaDate == null || data.slaDate is string) &&
@@ -185,7 +187,7 @@ service cloud.firestore {
          request.resource.data.uid == resource.data.uid &&
          request.resource.data.email == resource.data.email &&
          (!('xp' in request.resource.data) || 
-          (request.resource.data.xp == 0 && request.resource.data.level == 'Padawan do Backup') ||
+          (request.resource.data.xp == 0 && (request.resource.data.level == 'Operador de Snapshot L1' || request.resource.data.level == 'Padawan do Backup')) ||
           (!('xp' in resource.data) && request.resource.data.xp <= 100) || 
           ('xp' in resource.data && request.resource.data.xp - resource.data.xp <= 100 && request.resource.data.xp - resource.data.xp >= -100)))
       );

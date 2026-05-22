@@ -15,10 +15,10 @@
         "technicalAnalysis": { "type": "string" },
         "actionPlan": { "type": "string" },
         "backupType": { "type": "string" },
-        "criticality": { "type": "string", "enum": ["Muito Alta", "Alta", "Média", "Baixa"] },
-        "rootCause": { "type": "string", "enum": ["Hardware", "Software", "Rede", "Humano", "Configuração", "Terceiro"] },
-        "impact": { "type": "string", "enum": ["Total", "Parcial", "Mínimo", "Nenhum"] },
-        "treatmentStatus": { "type": "string", "enum": ["Pendente", "Em Análise", "Em Correção", "Validando", "Resolvido"] },
+        "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "rootCause": { "type": "string", "enum": ["network", "storage", "credential", "service", "window", "human", "other"] },
+        "impact": { "type": "string", "enum": ["low", "medium", "high"] },
+        "treatmentStatus": { "type": "string", "enum": ["pending", "analyzing", "mitigated", "resolved"] },
         "actionDeadline": { "type": "string" },
         "recurrence": { "type": "boolean" },
         "responsibleTreatment": { "type": "string" }
@@ -135,7 +135,9 @@
               "completed": { "type": "boolean" }
             }
           }
-        }
+        },
+        "notes": { "type": "string" },
+        "isGolden": { "type": "boolean" }
       },
       "required": ["title", "completed", "createdAt", "userId", "status", "type", "priority", "owner"]
     }
