@@ -22,6 +22,8 @@ interface SettingsViewProps {
   onDeleteBackupType: (id: string) => void;
   users?: any[];
   onUpdateUserRole?: (userId: string, newRole: string) => void;
+  onDeleteUser?: (userId: string) => Promise<void>;
+  currentUserId?: string;
   isAdmin: boolean;
   onResetData?: (
     resetType: 'personal' | 'system',
@@ -51,6 +53,8 @@ export function SettingsView({
   onDeleteBackupType,
   users = [],
   onUpdateUserRole,
+  onDeleteUser,
+  currentUserId,
   isAdmin,
   onResetData
 }: SettingsViewProps) {
@@ -65,6 +69,7 @@ export function SettingsView({
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [deletingDestId, setDeletingDestId] = useState<string | null>(null);
   const [deletingBackupTypeId, setDeletingBackupTypeId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   const [isResettingPersonal, setIsResettingPersonal] = useState(false);
   const [isResettingSystem, setIsResettingSystem] = useState(false);
@@ -797,16 +802,29 @@ export function SettingsView({
 
                           {/* Action Selector */}
                           <td className="px-5 py-3.5 text-right">
-                            <select 
-                              value={u.role || 'viewer'}
-                              onChange={(e) => onUpdateUserRole?.(u.id, e.target.value)}
-                              className="text-xs border border-border-main bg-bg-card text-text-main rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-brand font-semibold cursor-pointer"
-                              disabled={u.email === 'joaoribasdossantos@gmail.com'}
-                            >
-                              <option value="admin">Administrador</option>
-                              <option value="editor">Editor</option>
-                              <option value="viewer">Visualizador</option>
-                            </select>
+                            <div className="flex items-center justify-end gap-2">
+                              <select 
+                                value={u.role || 'viewer'}
+                                onChange={(e) => onUpdateUserRole?.(u.id, e.target.value)}
+                                className="text-xs border border-border-main bg-bg-card text-text-main rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-brand font-semibold cursor-pointer"
+                                disabled={u.email === 'joaoribasdossantos@gmail.com'}
+                              >
+                                <option value="admin">Administrador</option>
+                                <option value="editor">Editor</option>
+                                <option value="viewer">Visualizador</option>
+                              </select>
+                              {isAdmin && onDeleteUser && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingUserId(u.id)}
+                                  disabled={u.email === 'joaoribasdossantos@gmail.com' || u.id === currentUserId}
+                                  className="p-1.5 rounded-lg border border-border-main text-text-secondary hover:text-danger hover:border-danger/30 hover:bg-danger/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                  title="Excluir Usuário"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -815,6 +833,19 @@ export function SettingsView({
                 </table>
               </div>
             </div>
+
+            <DeleteConfirmationModal 
+              isOpen={!!deletingUserId}
+              onClose={() => setDeletingUserId(null)}
+              onConfirm={async () => {
+                if (deletingUserId && onDeleteUser) {
+                  await onDeleteUser(deletingUserId);
+                }
+                setDeletingUserId(null);
+              }}
+              title="Excluir Usuário"
+              message="Tem certeza que deseja excluir as permissões e o perfil de banco de dados deste usuário? Esta ação removerá seu cargo e progresso no sistema."
+            />
           </>
         );
     }

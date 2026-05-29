@@ -37,6 +37,7 @@ import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { LiquidMetalButton } from './components/LiquidMetal';
 import { Login } from './components/Login';
+import { DotMatrixLoader } from './components/DotMatrixLoader';
 import { 
   auth, 
   db, 
@@ -449,6 +450,15 @@ export default function App() {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    if (!effectiveIsAdmin) return;
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+    }
+  };
+
   const addBackupType = async (name: string) => {
     if (!effectiveIsAdmin) return;
     try {
@@ -732,6 +742,8 @@ export default function App() {
             onDeleteDestination={deleteDestination}
             users={users}
             onUpdateUserRole={updateUserRole}
+            onDeleteUser={deleteUser}
+            currentUserId={user?.uid}
             backupTypes={backupTypes}
             onAddBackupType={addBackupType}
             onUpdateBackupType={updateBackupType}
@@ -762,7 +774,7 @@ export default function App() {
         <aside className="w-[240px] sidebar flex-shrink-0 flex flex-col h-full hidden md:flex">
           <div className="h-20 flex items-center px-6 border-b border-border-main">
             <div className="flex items-center gap-3">
-              <CloudDone className="w-6 h-6 text-brand" />
+              <DotMatrixLoader pattern="dynamic" color="petal-shimmer" size="logo" />
               <span className="font-heading font-bold text-lg tracking-tight text-text-main">Dashboard</span>
             </div>
           </div>

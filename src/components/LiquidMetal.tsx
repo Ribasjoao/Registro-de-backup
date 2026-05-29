@@ -475,7 +475,7 @@ export function LiquidMetalPlayground() {
     { id: 'chrome', label: 'Chrome Prateado', description: 'Prata líquido polido com reflexos de alta fidelidade e brilho cromado.', colorTheme: 'from-slate-200 to-slate-400 text-slate-800' },
     { id: 'gold', label: 'Ouro Imperial', description: 'Latão e ouro puro 24k com brilho de metal nobre e reflexos quentes.', colorTheme: 'from-amber-200 to-yellow-500 text-amber-950' },
     { id: 'dark', label: 'Aço Titânio Iridescente', description: 'Liga de titânio acetinado com finos reflexos de oxidação furta-cor.', colorTheme: 'from-slate-700 to-slate-900 text-slate-100' },
-    { id: 'holo', label: 'Holográfico Gate7', description: 'Metal psicodélico neon combinando as cores violeta e ciano do Gate7.', colorTheme: 'from-fuchsia-400 to-cyan-400 text-purple-950' },
+    { id: 'holo', label: 'Holográfico Psicodélico', description: 'Metal psicodélico neon combinando as cores violeta e ciano de forma vibrante.', colorTheme: 'from-fuchsia-400 to-cyan-400 text-purple-950' },
     { id: 'rose', label: 'Cobre / Ouro Rosé', description: 'Efeito cobre cintilante escovado, refinado e com contrastes suaves.', colorTheme: 'from-rose-300 to-amber-400 text-rose-950' },
   ];
 
@@ -528,7 +528,7 @@ export function LiquidMetalPlayground() {
                     Demonstração de Contraste
                   </span>
                   <h3 className="text-xl font-heading font-black tracking-tight drop-shadow-md">
-                    GATE7 CHROMATIC SHADER
+                    LIQUID CHROMATIC SHADER
                   </h3>
                   <p className="text-xs text-slate-200 drop-shadow">
                     Passe o mouse por cima do metal para distorcer a geometria mercúria.
@@ -542,7 +542,7 @@ export function LiquidMetalPlayground() {
               {/* Minimal floating brand label */}
               <div className="absolute top-4 left-4 backdrop-blur-md bg-black/40 border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-bold tracking-widest text-slate-200 flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-brand" />
-                GATE7 HIGH-FIDELITY
+                METAL HIGH-FIDELITY
               </div>
             </LiquidMetalCanvas>
           </div>

@@ -11,7 +11,8 @@ import {
   UserPlus, 
   AlertCircle,
   HelpCircle,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { auth, googleProvider, signInWithPopup } from '../firebase';
 import { 
@@ -29,13 +30,13 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Helper function to normalize username into a internal gate7 email
+  // Helper function to normalize username into a local email for this backup registration system
   const getNormalizedEmail = (input: string) => {
     const trimmed = input.trim();
     if (!trimmed) return '';
-    // If it doesn't contain '@', treat it as a local username under gate7.com
+    // If it doesn't contain '@', treat it as a local username under @registrobackup.com
     if (!trimmed.includes('@')) {
-      return `${trimmed.toLowerCase()}@gate7.com`;
+      return `${trimmed.toLowerCase()}@registrobackup.com`;
     }
     return trimmed;
   };
@@ -128,8 +129,8 @@ export function Login() {
           </div>
         </div>
         
-        <h1 className="font-heading text-3xl font-bold text-text-main mb-1 text-center">Gate7</h1>
-        <p className="text-text-secondary text-sm mb-6 text-center">Gestão de Infraestrutura & Auditorias</p>
+        <h1 className="font-heading text-3xl font-bold text-text-main mb-1 text-center">Registro de Backup</h1>
+        <p className="text-text-secondary text-sm mb-6 text-center">Gestão de Backups & Auditorias</p>
 
         {/* Tab switch */}
         <div className="grid grid-cols-2 bg-bg-main p-1 rounded-xl mb-6 border border-border-main/50">
