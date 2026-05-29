@@ -788,8 +788,15 @@ export default function App() {
           <div className="p-4 border-t border-border-main">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-white overflow-hidden">
-                  {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.email?.substring(0, 2).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-white overflow-hidden select-none">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" />
+                  ) : (
+                    (user.displayName 
+                      ? user.displayName.trim().split(/\s+/).map(n => n[0]).join('').substring(0, 2)
+                      : user.email?.substring(0, 2) || 'OP'
+                    ).toUpperCase()
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
