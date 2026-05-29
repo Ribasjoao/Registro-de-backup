@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChevronLeft, 
@@ -75,12 +75,29 @@ export function PresentationCarousel({ backups, onClose }: PresentationCarouselP
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [last7DaysBackups]);
 
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (isHovered) return;
+
+    const intervalId = setInterval(() => {
+      setCurrentView(prev => prev === 'dashboard' ? 'failures' : 'dashboard');
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(intervalId);
+  }, [isHovered]);
+
   const toggleView = () => {
     setCurrentView(prev => prev === 'dashboard' ? 'failures' : 'dashboard');
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 text-white flex flex-col overflow-hidden font-sans">
+    <div 
+      id="presentation-carousel"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="fixed inset-0 z-[100] bg-slate-950 text-white flex flex-col overflow-hidden font-sans"
+    >
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/20 blur-[120px] rounded-full" />

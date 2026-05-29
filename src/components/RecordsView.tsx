@@ -1,21 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Calendar, Filter, Download, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, Edit2, LayoutList, CalendarDays } from 'lucide-react';
+import { Search, Calendar, Filter, Download, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, Edit2, Trash2, LayoutList, CalendarDays } from 'lucide-react';
 import { StatusBadge } from './UI';
 import { cn } from '../lib/utils';
 import { BackupRecord } from '../types';
 import { BackupDetailsModal } from './BackupDetailsModal';
+import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 
 interface RecordsViewProps {
   backups: BackupRecord[];
   onEdit?: (backup: BackupRecord) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function RecordsView({ backups, onEdit }: RecordsViewProps) {
+export function RecordsView({ backups, onEdit, onDelete }: RecordsViewProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'week' | 'month' | 'all'>('month');
   const [selectedBackup, setSelectedBackup] = useState<BackupRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [deleteBackupId, setDeleteBackupId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const filteredBackups = useMemo(() => {
     let result = backups.filter(backup => 
@@ -174,6 +178,18 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
               <Edit2 className="w-4 h-4" />
             </button>
           )}
+          {onDelete && (
+            <button 
+              onClick={() => {
+                setDeleteBackupId(backup.id);
+                setIsDeleteModalOpen(true);
+              }}
+              className="p-1.5 text-text-secondary hover:text-danger hover:bg-bg-main rounded-lg transition-all"
+              title="Excluir Registro"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -326,6 +342,21 @@ export function RecordsView({ backups, onEdit }: RecordsViewProps) {
         isOpen={isDetailsOpen} 
         onClose={() => setIsDetailsOpen(false)} 
         backup={selectedBackup} 
+      />
+
+      <DeleteConfirmationModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteBackupId(null);
+        }} 
+        onConfirm={() => {
+          if (deleteBackupId && onDelete) {
+            onDelete(deleteBackupId);
+          }
+        }}
+        title="Excluir Auditoria de Backup"
+        message="Tem certeza que deseja excluir permanentemente esta auditoria de backup? Esta ação não poderá ser desfeita."
       />
     </div>
   );

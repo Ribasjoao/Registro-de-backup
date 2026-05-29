@@ -17,6 +17,7 @@ import {
   LogOut,
   ShieldCheck,
   Sparkles,
+  Palette,
   Moon,
   Sun,
   Trophy,
@@ -34,6 +35,7 @@ import { TaskCenter } from './components/TaskCenter/TaskCenter';
 import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
+import { LiquidMetalButton } from './components/LiquidMetal';
 import { Login } from './components/Login';
 import { 
   auth, 
@@ -401,6 +403,15 @@ export default function App() {
     }
   };
 
+  const deleteBackup = async (id: string) => {
+    if (!effectiveIsEditor) return;
+    try {
+      await deleteDoc(doc(db, 'backups', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `backups/${id}`);
+    }
+  };
+
   const updateDestination = async (updatedDest: StorageDestination) => {
     if (!effectiveIsEditor) return;
     try {
@@ -693,7 +704,7 @@ export default function App() {
       case 'weekly':
         return <WeeklyExecutiveView backups={backups} tasks={tasks} />;
       case 'records':
-        return <RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} />;
+        return <RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} />;
       case 'tasks':
         return (
           <TaskCenter 
@@ -843,13 +854,14 @@ export default function App() {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
               </button>
               {effectiveIsEditor && (
-                <button 
+                <LiquidMetalButton 
                   onClick={() => setIsModalOpen(true)}
-                  className="bg-brand hover:bg-brand-dark text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-sm active:scale-95"
+                  preset="holo"
+                  className="px-5 py-2.5 rounded-lg active:scale-95 flex items-center gap-2 text-xs font-black uppercase tracking-widest cursor-pointer shadow-md select-none"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-5 h-5 font-black" />
                   Registrar Backup
-                </button>
+                </LiquidMetalButton>
               )}
             </div>
           </header>
