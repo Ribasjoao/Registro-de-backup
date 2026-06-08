@@ -272,6 +272,31 @@
   @apply text-3xl lg:text-4xl font-medium text-slate-400 mt-4;
 }
 
+/* Custom Scrollbar Global */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px; /* Essencial para as barras horizontais nas tabelas */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 40, 217, 0.3);
+}
+
+/* Suporte para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 40, 217, 0.15) transparent;
+}
+
 /* Custom Fine Scrollbar Utility */
 .custom-fine-scrollbar {
   scrollbar-width: thin;
