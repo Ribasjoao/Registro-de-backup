@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History } from 'lucide-react';
+import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download } from 'lucide-react';
 import { BackupRecord } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
+import { toast } from 'react-hot-toast';
 
 interface DashboardViewProps {
   backups: BackupRecord[];
@@ -180,6 +181,84 @@ export function DashboardView({ backups }: DashboardViewProps) {
       .slice(0, 4);
   }, [filteredBackups]);
 
+  // Export report function prioritizing failures and alerts
+  const handleExportReport = () => {
+    const toastId = toast.loading('Gerando relatório de auditoria...');
+    
+    try {
+      // Sort: failed, warning, success
+      const sorted = [...filteredBackups].sort((a, b) => {
+        const priorityOrder = { failed: 0, warning: 1, success: 2 };
+        return priorityOrder[a.status] - priorityOrder[b.status];
+      });
+
+      // Assemble CSV Headers with UTF-8 BOM for Brazilian Excel compatibility
+      let csvContent = '\uFEFF';
+      
+      // Header information
+      csvContent += 'RELATÓRIO SEMANAL EXECUTIVO - PLATAFORMA GATE7\n';
+      csvContent += `Ciclo de Fechamento:;${filterType === 'reuniao' ? 'Semanal (Sáb-Sex)' : filterType === '7_dias' ? 'Últimos 7 Dias' : 'Últimos 30 Dias'}\n`;
+      csvContent += `Intervalo das Datas:;${filterRange.start.toLocaleDateString('pt-BR')} até ${filterRange.end.toLocaleDateString('pt-BR')}\n`;
+      csvContent += `Gerado por responsável em:;${new Date().toLocaleString('pt-BR')}\n\n`;
+      
+      // Metrics Overview
+      csvContent += 'RESUMO DAS MÉTRICAS\n';
+      csvContent += `Total de Backups Executados:;${total}\n`;
+      csvContent += `Taxa de Sucesso (SLA):;${successRate}%\n`;
+      csvContent += `Sucessos:;${success}\n`;
+      csvContent += `Alertas/Avisos:;${warning}\n`;
+      csvContent += `Falhas Críticas:;${failed}\n\n`;
+      
+      // Detail list header
+      csvContent += 'DETALHADO DE ROTINAS DE BACKUP (ORDENADO POR STATUS DE GRAVIDADE)\n';
+      csvContent += 'Status;Título do Backup;Cliente;Categoria;Tipo;Responsável;Análise Técnica/Plano de Ação;Data e Hora\n';
+      
+      sorted.forEach(record => {
+        const statusTranslations = {
+          success: 'Sucesso',
+          warning: 'Aviso',
+          failed: 'Falha'
+        };
+        const statusText = statusTranslations[record.status] || record.status;
+        const formattedDate = new Date(record.timestamp).toLocaleString('pt-BR');
+        
+        // Combine technical analysis or action plan into notes for context
+        const notesParts: string[] = [];
+        if (record.technicalAnalysis) notesParts.push(`[Análise] ${record.technicalAnalysis}`);
+        if (record.actionPlan) notesParts.push(`[Plano de Ação] ${record.actionPlan}`);
+        const notesText = notesParts.length > 0 ? notesParts.join(' | ').replace(/[\r\n;"]+/g, ' ') : '-';
+        
+        const titleSafe = (record.title || '').replace(/[\r\n;"]+/g, ' ');
+        const clientSafe = (record.client || '').replace(/[\r\n;"]+/g, ' ');
+        const catSafe = (record.category || '').replace(/[\r\n;"]+/g, ' ');
+        const typeSafe = (record.backupType || 'Nakivo').replace(/[\r\n;"]+/g, ' ');
+        const respSafe = (record.responsible || '').replace(/[\r\n;"]+/g, ' ');
+
+        csvContent += `"${statusText}";"${titleSafe}";"${clientSafe}";"${catSafe}";"${typeSafe}";"${respSafe}";"${notesText}";"${formattedDate}"\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      const fileDate = new Date().toISOString().split('T')[0];
+      link.setAttribute('href', url);
+      link.setAttribute('download', `gate7-relatorio-executivo-${fileDate}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        toast.success('Relatório baixado com sucesso!', { id: toastId });
+      }, 700);
+    } catch (error) {
+      console.error(error);
+      toast.error('Ocorreu um erro ao gerar o relatório.', { id: toastId });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
@@ -239,6 +318,15 @@ export function DashboardView({ backups }: DashboardViewProps) {
               {filterRange.start.toLocaleDateString('pt-BR')} - {filterRange.end.toLocaleDateString('pt-BR')}
             </span>
           </div>
+
+          <button
+            onClick={handleExportReport}
+            className="flex items-center gap-2 px-4 py-2 bg-text-main text-bg-main hover:bg-text-main/90 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            title="Exportar dados para Excel (.csv)"
+          >
+            <Download className="w-4 h-4" />
+            Exportar Relatório
+          </button>
         </div>
       </div>
 
