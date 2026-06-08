@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle } from 'lucide-react';
+import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle, UserPlus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { Client, StorageDestination, BackupType } from '../types';
@@ -7,6 +7,8 @@ import { EditDestinationModal } from './EditDestinationModal';
 import { EditClientModal } from './EditClientModal';
 import { AddDestinationModal } from './AddDestinationModal';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
+import { useUsers } from '../hooks/useUsers';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SettingsViewProps {
   clients: Client[];
@@ -37,7 +39,31 @@ interface SettingsViewProps {
   ) => Promise<void>;
 }
 
-type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'reset';
+const usersContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const usersItemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 130,
+      damping: 16
+    }
+  }
+};
+
+type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'users' | 'reset';
 
 export function SettingsView({ 
   clients, 
@@ -62,6 +88,48 @@ export function SettingsView({
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [newClientName, setNewClientName] = useState('');
   const [newBackupTypeName, setNewBackupTypeName] = useState('');
+  
+  // Custom states/hooks for User Management (Equipe)
+  const { createUser, loading: isCreatingUser } = useUsers();
+  const [createUserName, setCreateUserName] = useState('');
+  const [createUserEmail, setCreateUserEmail] = useState('');
+  const [createUserPassword, setCreateUserPassword] = useState('');
+  const [createUserRole, setCreateUserRole] = useState<'admin' | 'editor' | 'viewer'>('editor');
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createUserName.trim()) {
+      toast.error('Informe o nome do usuário');
+      return;
+    }
+    if (!createUserEmail.trim()) {
+      toast.error('Informe o e-mail do usuário');
+      return;
+    }
+    if (!createUserPassword.trim()) {
+      toast.error('Informe a senha do usuário');
+      return;
+    }
+    if (createUserPassword.length < 6) {
+      toast.error('A senha deve conter no mínimo 6 caracteres');
+      return;
+    }
+
+    const newUser = await createUser(
+      createUserName.trim(),
+      createUserEmail.trim(),
+      createUserPassword,
+      createUserRole
+    );
+
+    if (newUser) {
+      setCreateUserName('');
+      setCreateUserEmail('');
+      setCreateUserPassword('');
+      setCreateUserRole('editor');
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [editingDest, setEditingDest] = useState<StorageDestination | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -849,6 +917,225 @@ export function SettingsView({
             />
           </>
         );
+
+      case 'users':
+        if (!isAdmin) return null;
+        return (
+          <motion.div 
+            variants={usersContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            {/* Header */}
+            <div>
+              <h2 className="font-heading text-xl text-text-main font-bold flex items-center gap-2">
+                <Users className="w-5 h-5 text-brand" />
+                Membros da Equipe (Técnicos)
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Cadastre novas credenciais locais para técnicos da sua equipe e controle os seus níveis de permissão no Registro de Backup.
+              </p>
+            </div>
+
+            {/* Glassmorphic Form Container */}
+            <motion.div 
+              variants={usersItemVariants}
+              className="relative p-6 rounded-2xl overflow-hidden shadow-xl border border-white/10 dark:border-border-main/50 bg-white/[0.03] dark:bg-bg-card/20 backdrop-blur-md"
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-brand/5 via-transparent to-purple-500/5 pointer-events-none" />
+              
+              <h3 className="font-heading text-base font-bold text-text-main mb-4 flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-brand" />
+                Novo Integrante
+              </h3>
+
+              <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                {/* Nome */}
+                <div className="space-y-1.5 col-span-1">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={createUserName}
+                    onChange={(e) => setCreateUserName(e.target.value)}
+                    placeholder="Carlos Silva"
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                  />
+                </div>
+
+                {/* E-mail */}
+                <div className="space-y-1.5 col-span-1">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">E-mail Corporativo</label>
+                  <input
+                    type="email"
+                    value={createUserEmail}
+                    onChange={(e) => setCreateUserEmail(e.target.value)}
+                    placeholder="exemplo@empresa.com"
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                  />
+                </div>
+
+                {/* Senha */}
+                <div className="space-y-1.5 col-span-1">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Senha de Acesso</label>
+                  <input
+                    type="password"
+                    value={createUserPassword}
+                    onChange={(e) => setCreateUserPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                  />
+                </div>
+
+                {/* Nível de Acesso */}
+                <div className="space-y-1.5 col-span-1 flex gap-2">
+                  <div className="flex-1 space-y-1.5">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Permissão</label>
+                    <select
+                      value={createUserRole}
+                      onChange={(e) => setCreateUserRole(e.target.value as 'admin' | 'editor' | 'viewer')}
+                      className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all cursor-pointer font-medium"
+                    >
+                      <option value="editor" className="bg-bg-card text-text-main">Operador</option>
+                      <option value="admin" className="bg-bg-card text-text-main">Admin</option>
+                      <option value="viewer" className="bg-bg-card text-text-main">Visualizador</option>
+                    </select>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={isCreatingUser}
+                    className="h-10 px-5 bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shrink-0 flex items-center justify-center cursor-pointer shadow-md self-end"
+                  >
+                    {isCreatingUser ? 'Criando...' : 'Cadastrar'}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+
+            {/* List */}
+            <motion.div variants={usersItemVariants} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading text-base font-bold text-text-main">Cadastros Ativos</h3>
+                <span className="text-xs text-text-secondary font-mono">{users.length} usuários cadastrados</span>
+              </div>
+
+              <div className="border border-border-main rounded-2xl overflow-hidden bg-bg-card shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="bg-bg-main border-b border-border-main text-text-secondary select-none">
+                        <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">Técnico</th>
+                        <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">E-mail de Acesso</th>
+                        <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">Nível e Experiência (XP)</th>
+                        <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider">Cargo do Sistema</th>
+                        <th className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-main">
+                      <AnimatePresence mode="popLayout">
+                        {users.map((u) => {
+                          const userInitials = u.displayName
+                            ? u.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+                            : u.email ? u.email[0].toUpperCase() : 'U';
+
+                          return (
+                            <motion.tr 
+                              layout
+                              variants={usersItemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                              key={u.id} 
+                              className="hover:bg-bg-main/40 transition-colors"
+                            >
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-3">
+                                  {u.photoURL ? (
+                                    <img 
+                                      src={u.photoURL} 
+                                      alt={u.displayName || 'Usuário'} 
+                                      referrerPolicy="no-referrer"
+                                      className="w-8 h-8 rounded-full border border-border-main object-cover" 
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/20 text-brand flex items-center justify-center font-bold text-xs shrink-0">
+                                      {userInitials}
+                                    </div>
+                                  )}
+                                  <span className="text-sm font-bold text-text-main truncate max-w-[150px]">
+                                    {u.displayName || 'Sem Nome'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-3.5">
+                                <span className="text-sm font-medium text-text-main font-mono">
+                                  {u.email || <span className="text-text-secondary italic">Não informado</span>}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-3.5">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-brand">{u.xp !== undefined ? `${u.xp} XP` : '0 XP'}</span>
+                                  <span className="text-[10px] text-text-secondary font-medium truncate max-w-[120px]">
+                                    {u.level || 'Operador de Snapshot L1'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-3.5">
+                                <span className={cn(
+                                  "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border",
+                                  u.role === 'admin' ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800/50" :
+                                  u.role === 'editor' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800/50" :
+                                  "bg-slate-100 dark:bg-slate-800/50 text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-800/50"
+                                )}>
+                                  {u.role === 'admin' ? 'Administrador' : u.role === 'editor' ? 'Editor' : 'Visualizador'}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <select 
+                                    value={u.role || 'viewer'}
+                                    onChange={(e) => onUpdateUserRole?.(u.id, e.target.value)}
+                                    className="text-xs border border-border-main bg-bg-card text-text-main rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-brand font-semibold cursor-pointer"
+                                    disabled={u.email === 'joaoribasdossantos@gmail.com'}
+                                  >
+                                    <option value="admin">Administrador</option>
+                                    <option value="editor">Editor</option>
+                                    <option value="viewer">Visualizador</option>
+                                  </select>
+                                  {isAdmin && onDeleteUser && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingUserId(u.id)}
+                                      disabled={u.email === 'joaoribasdossantos@gmail.com' || u.id === currentUserId}
+                                      className="p-1.5 rounded-lg border border-border-main text-text-secondary hover:text-danger hover:border-danger/30 hover:bg-danger/10 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                      title="Excluir Usuário"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        );
     }
   };
 
@@ -916,16 +1203,16 @@ export function SettingsView({
           <span className="text-sm">Alertas e Notificações</span>
         </button>
         <button 
-          onClick={() => setActiveTab('security')}
+          onClick={() => setActiveTab('users')}
           className={cn(
             "w-full flex items-center gap-3 px-4 py-3 text-left border-l-4 rounded transition-colors",
-            activeTab === 'security' 
+            activeTab === 'users' 
               ? "border-brand bg-brand/5 text-text-main font-bold" 
               : "border-transparent text-text-main hover:bg-bg-main font-medium"
           )}
         >
-          <Shield className={cn("w-5 h-5", activeTab === 'security' ? "text-brand" : "text-text-secondary")} />
-          <span className="text-sm">Controle de Acesso</span>
+          <UserPlus className={cn("w-5 h-5", activeTab === 'users' ? "text-brand" : "text-text-secondary")} />
+          <span className="text-sm">Gerenciar Equipe</span>
         </button>
         <button 
           onClick={() => setActiveTab('reset')}
@@ -944,7 +1231,7 @@ export function SettingsView({
       <div className="flex-1 w-full card p-6 md:p-8 min-h-[500px]">
         {renderContent()}
 
-        {activeTab !== 'clients' && activeTab !== 'reset' && (
+        {activeTab !== 'clients' && activeTab !== 'users' && activeTab !== 'reset' && (
           <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-border-main">
             <button className="px-4 py-2 text-sm font-semibold text-text-main hover:bg-bg-main rounded-lg transition-colors">
               Cancelar

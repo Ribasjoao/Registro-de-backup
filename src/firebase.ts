@@ -8,7 +8,7 @@ import defaultFirebaseConfig from '../firebase-applet-config.json';
 
 // Support both environment variables and the local configuration file
 const metaEnv = (import.meta as any).env || {};
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: metaEnv.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
   authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
   projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
