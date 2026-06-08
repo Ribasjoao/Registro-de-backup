@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { awardXP } from './lib/xpService';
 import { motion } from 'motion/react';
 import { 
@@ -26,13 +27,15 @@ import {
   LayoutList
 } from 'lucide-react';
 import { cn } from './lib/utils';
-import { DashboardView } from './components/DashboardView';
-import { RecordsView } from './components/RecordsView';
-import { SettingsView } from './components/SettingsView';
-import { DestinationsView } from './components/DestinationsView';
-import { ReportsView } from './components/ReportsView';
-import { TaskCenter } from './components/TaskCenter/TaskCenter';
-import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
+
+// Lazy load views for improved performance (code splitting)
+const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
+const RecordsView = lazy(() => import('./components/RecordsView').then(m => ({ default: m.RecordsView })));
+const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
+const DestinationsView = lazy(() => import('./components/DestinationsView').then(m => ({ default: m.DestinationsView })));
+const ReportsView = lazy(() => import('./components/ReportsView').then(m => ({ default: m.ReportsView })));
+const TaskCenter = lazy(() => import('./components/TaskCenter/TaskCenter').then(m => ({ default: m.TaskCenter })));
+const WeeklyExecutiveView = lazy(() => import('./components/WeeklyExecutiveView').then(m => ({ default: m.WeeklyExecutiveView })));
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { LiquidMetalButton } from './components/LiquidMetal';
@@ -80,7 +83,8 @@ export default function App() {
   const effectiveIsEditor = isRootUser || isEditor;
 
   const hasGeneratedToday = useRef(false);
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
@@ -220,7 +224,7 @@ export default function App() {
           setIsAdmin(isRoot || finalRole === 'admin');
           setIsEditor(isRoot || finalRole === 'admin' || finalRole === 'editor');
         } catch (error) {
-          console.error('Error syncing user profile:', error);
+          console.warn('Error syncing user profile (using offline fallback):', error);
           setIsAdmin(isRoot || isAdminUser);
           setIsEditor(isRoot || isEditorUser);
           setAppUser({
@@ -698,64 +702,14 @@ export default function App() {
   }
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'weekly', label: 'Resumo Semanal', icon: Presentation },
-    { id: 'records', label: 'Registros', icon: ListTodo },
-    { id: 'tasks', label: 'Tarefas', icon: LayoutList },
-    { id: 'destinations', label: 'Destinos', icon: Database },
-    { id: 'reports', label: 'Relatórios IA', icon: Sparkles },
-    ...(effectiveIsAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings }] : []),
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'weekly', label: 'Resumo Semanal', icon: Presentation, path: '/semanal' },
+    { id: 'records', label: 'Registros', icon: ListTodo, path: '/registros' },
+    { id: 'tasks', label: 'Tarefas', icon: LayoutList, path: '/tarefas' },
+    { id: 'destinations', label: 'Destinos', icon: Database, path: '/destinos' },
+    { id: 'reports', label: 'Relatórios IA', icon: Sparkles, path: '/relatorios' },
+    ...(effectiveIsAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings, path: '/configuracoes' }] : []),
   ];
-
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <DashboardView backups={backups} />;
-      case 'weekly':
-        return <WeeklyExecutiveView backups={backups} tasks={tasks} />;
-      case 'records':
-        return <RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} />;
-      case 'tasks':
-        return (
-          <TaskCenter 
-            tasks={tasks} 
-            onAddTask={addTask} 
-            onUpdateTask={updateTask}
-            onDeleteTask={deleteTask} 
-            defaultOwner={user?.displayName || user?.email || 'Operador'}
-          />
-        );
-      case 'destinations':
-        return <DestinationsView destinations={destinations} clients={clients} onUpdate={effectiveIsEditor ? updateDestination : async () => {}} onAdd={effectiveIsEditor ? addDestination : async () => {}} onDelete={effectiveIsAdmin ? deleteDestination : () => {}} isAdmin={effectiveIsEditor} />;
-      case 'reports':
-        return <ReportsView backups={backups} />;
-      case 'settings':
-        return (
-          <SettingsView 
-            clients={clients} 
-            onAddClient={addClient} 
-            onUpdateClient={updateClient} 
-            onDeleteClient={deleteClient} 
-            destinations={destinations} 
-            onUpdateDestination={updateDestination} 
-            onAddDestination={addDestination} 
-            onDeleteDestination={deleteDestination}
-            users={users}
-            onUpdateUserRole={updateUserRole}
-            onDeleteUser={deleteUser}
-            currentUserId={user?.uid}
-            backupTypes={backupTypes}
-            onAddBackupType={addBackupType}
-            onUpdateBackupType={updateBackupType}
-            onDeleteBackupType={deleteBackupType}
-            isAdmin={effectiveIsAdmin}
-            onResetData={handleResetData}
-          />
-        );
-      default:
-        return <DashboardView backups={backups} />;
-    }
-  };
 
   return (
     <div className={cn(
@@ -780,21 +734,24 @@ export default function App() {
           </div>
           
           <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setCurrentView(item.id as View)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4",
-                  currentView === item.id 
-                    ? "bg-brand/10 text-brand border-brand font-semibold" 
-                    : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-sm">{item.label}</span>
-              </button>
-            ))}
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.path)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4",
+                    isActive 
+                      ? "bg-brand/10 text-brand border-brand font-semibold" 
+                      : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-sm">{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
 
           <div className="p-4 border-t border-border-main">
@@ -847,7 +804,7 @@ export default function App() {
           <header className="h-20 bg-bg-card border-b border-border-main flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10">
             <div>
               <h1 className="font-heading text-2xl font-bold text-text-main">
-                {navItems.find(i => i.id === currentView)?.label}
+                {navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard'}
               </h1>
             </div>
             
@@ -892,7 +849,7 @@ export default function App() {
           isPresentationMode ? "p-0 flex items-center justify-center" : "p-4 md:p-8"
         )}>
           <motion.div
-            key={currentView + (isPresentationMode ? '-presentation' : '')}
+            key={location.pathname + (isPresentationMode ? '-presentation' : '')}
             initial={{ opacity: 0, scale: isPresentationMode ? 0.95 : 1 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
@@ -901,7 +858,54 @@ export default function App() {
               isPresentationMode ? "w-full h-full max-w-none" : "max-w-[1440px]"
             )}
           >
-            {renderView()}
+            <Suspense fallback={
+              <div className="h-[60vh] w-full flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand border-t-transparent"></div>
+              </div>
+            }>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<DashboardView backups={backups} />} />
+                <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} />} />
+                <Route path="/registros" element={<RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} />} />
+                <Route path="/tarefas" element={
+                  <TaskCenter 
+                    tasks={tasks} 
+                    onAddTask={addTask} 
+                    onUpdateTask={updateTask}
+                    onDeleteTask={deleteTask} 
+                    defaultOwner={user?.displayName || user?.email || 'Operador'}
+                  />
+                } />
+                <Route path="/destinos" element={<DestinationsView destinations={destinations} clients={clients} onUpdate={effectiveIsEditor ? updateDestination : async () => {}} onAdd={effectiveIsEditor ? addDestination : async () => {}} onDelete={effectiveIsAdmin ? deleteDestination : () => {}} isAdmin={effectiveIsEditor} />} />
+                <Route path="/relatorios" element={<ReportsView backups={backups} />} />
+                {effectiveIsAdmin && (
+                  <Route path="/configuracoes" element={
+                    <SettingsView 
+                      clients={clients} 
+                      onAddClient={addClient} 
+                      onUpdateClient={updateClient} 
+                      onDeleteClient={deleteClient} 
+                      destinations={destinations} 
+                      onUpdateDestination={updateDestination} 
+                      onAddDestination={addDestination} 
+                      onDeleteDestination={deleteDestination}
+                      users={users}
+                      onUpdateUserRole={updateUserRole}
+                      onDeleteUser={deleteUser}
+                      currentUserId={user?.uid}
+                      backupTypes={backupTypes}
+                      onAddBackupType={addBackupType}
+                      onUpdateBackupType={updateBackupType}
+                      onDeleteBackupType={deleteBackupType}
+                      isAdmin={effectiveIsAdmin}
+                      onResetData={handleResetData}
+                    />
+                  } />
+                )}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
           </motion.div>
         </div>
       </main>
