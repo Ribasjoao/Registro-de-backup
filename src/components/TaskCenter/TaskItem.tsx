@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Clock, 
   AlertTriangle, 
@@ -78,7 +79,10 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
   };
 
   return (
-    <div 
+    <motion.div 
+      whileHover={task.status !== 'done' ? { scale: 1.018, y: -2 } : undefined}
+      whileTap={task.status !== 'done' ? { scale: 0.99 } : undefined}
+      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
       className={cn(
         "group relative bg-bg-card/75 dark:bg-bg-card/45 backdrop-blur-md border rounded-2xl p-4 transition-all duration-300 cursor-pointer select-none",
         task.isGolden 
@@ -189,11 +193,16 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
         )}
 
         {/* Expanded Details Panel */}
-        {isExpanded && (
-          <div 
-            className="mt-2 pt-3 border-t border-border-main/50 space-y-3.5 animate-in slide-in-from-top-2 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              className="mt-2 pt-3 border-t border-border-main/50 space-y-3.5 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
             {task.description && (
               <div className="space-y-1">
                 <span className="text-[9px] font-black uppercase tracking-wider text-text-secondary">Descrição</span>
@@ -264,9 +273,10 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
                 <Edit className="w-3.5 h-3.5" /> Editar Detalhes
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

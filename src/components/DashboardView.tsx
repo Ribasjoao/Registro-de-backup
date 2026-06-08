@@ -6,6 +6,30 @@ import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 120,
+      damping: 16
+    }
+  }
+};
+
 interface DashboardViewProps {
   backups: BackupRecord[];
 }
@@ -196,7 +220,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
       let csvContent = '\uFEFF';
       
       // Header information
-      csvContent += 'RELATÓRIO SEMANAL EXECUTIVO - PLATAFORMA GATE7\n';
+      csvContent += 'RELATÓRIO SEMANAL EXECUTIVO - REGISTRO DE BACKUP\n';
       csvContent += `Ciclo de Fechamento:;${filterType === 'reuniao' ? 'Semanal (Sáb-Sex)' : filterType === '7_dias' ? 'Últimos 7 Dias' : 'Últimos 30 Dias'}\n`;
       csvContent += `Intervalo das Datas:;${filterRange.start.toLocaleDateString('pt-BR')} até ${filterRange.end.toLocaleDateString('pt-BR')}\n`;
       csvContent += `Gerado por responsável em:;${new Date().toLocaleString('pt-BR')}\n\n`;
@@ -243,7 +267,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
       
       const fileDate = new Date().toISOString().split('T')[0];
       link.setAttribute('href', url);
-      link.setAttribute('download', `gate7-relatorio-executivo-${fileDate}.csv`);
+      link.setAttribute('download', `registro-de-backup-relatorio-executivo-${fileDate}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
@@ -319,19 +343,27 @@ export function DashboardView({ backups }: DashboardViewProps) {
             </span>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
             onClick={handleExportReport}
             className="flex items-center gap-2 px-4 py-2 bg-text-main text-bg-main hover:bg-text-main/90 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
             title="Exportar dados para Excel (.csv)"
           >
             <Download className="w-4 h-4" />
             Exportar Relatório
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* 2. SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-1">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
         <KPICard 
           title="Taxa de Disponibilidade" 
           value={`${successRate}%`} 
@@ -359,7 +391,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
           subtitle="Verificações manuais necessárias"
           icon={<History className="w-5 h-5 text-warning" />}
         />
-      </div>
+      </motion.div>
 
       {/* 3. CHART DUAL VIEWS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -593,9 +625,9 @@ interface KPICardProps {
 function KPICard({ title, value, subtitle, icon, trend, trendUp, alert }: KPICardProps) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      variants={itemVariants}
+      whileHover={{ scale: 1.03, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
         "card p-5 border-l-4 shadow-sm",
         alert ? "border-l-danger bg-danger/[0.02]" : "border-l-brand"

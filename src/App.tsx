@@ -647,11 +647,14 @@ export default function App() {
             {navItems.map((item) => {
               const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
               return (
-                <button
+                <motion.button
                   key={item.id}
+                  whileHover={{ scale: 1.02, x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
                   onClick={() => navigate(item.path)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4",
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4 cursor-pointer",
                     isActive 
                       ? "bg-brand/10 text-brand border-brand font-semibold" 
                       : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
@@ -659,7 +662,7 @@ export default function App() {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="text-sm">{item.label}</span>
-                </button>
+                </motion.button>
               );
             })}
           </nav>
@@ -719,26 +722,37 @@ export default function App() {
             </div>
             
             <div className="flex items-center gap-4">
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 onClick={togglePresentationMode}
-                className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-brand transition-all rounded-lg hover:bg-brand/5 font-medium border border-transparent hover:border-brand/20"
+                className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-brand transition-all rounded-lg hover:bg-brand/5 font-medium border border-transparent hover:border-brand/20 cursor-pointer"
                 title="Iniciar Reunião de Diretoria"
               >
                 <Presentation className="w-5 h-5" />
                 <span className="hidden sm:inline text-sm">Iniciar Reunião</span>
-              </button>
+              </motion.button>
               
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 onClick={toggleDarkMode}
-                className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main"
+                className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
                 title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
               >
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-              <button className="relative p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main">
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                className="relative p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
-              </button>
+              </motion.button>
               {effectiveIsEditor && (
                 <LiquidMetalButton 
                   onClick={() => setIsModalOpen(true)}
@@ -760,9 +774,9 @@ export default function App() {
         )}>
           <motion.div
             key={location.pathname + (isPresentationMode ? '-presentation' : '')}
-            initial={{ opacity: 0, scale: isPresentationMode ? 0.95 : 1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
             className={cn(
               "mx-auto",
               isPresentationMode ? "w-full h-full max-w-none" : "max-w-[1440px]"

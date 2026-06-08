@@ -1,5 +1,30 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const columnVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 110,
+      damping: 15
+    }
+  }
+};
 import { 
   DndContext, 
   DragOverlay, 
@@ -36,8 +61,9 @@ function DroppableColumn({ id, title, count, children }: { id: string; title: st
   const { setNodeRef, isOver } = useDroppable({ id });
   
   return (
-    <div 
+    <motion.div 
       ref={setNodeRef} 
+      variants={columnVariants}
       className={cn(
         "flex flex-col bg-bg-card/40 border border-border-main/50 rounded-3xl p-4 transition-all duration-300 max-h-[66vh] h-[66vh] w-[290px] md:w-[320px] shrink-0 gap-3 select-none",
         isOver && "bg-brand/[0.04] border-brand/35 ring-1 ring-brand/10 shadow-inner"
@@ -62,7 +88,7 @@ function DroppableColumn({ id, title, count, children }: { id: string; title: st
       <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-fine-scrollbar min-h-0 pb-2">
         {children}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -132,7 +158,12 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-fine-scrollbar animate-in fade-in duration-300">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-fine-scrollbar"
+      >
         {TASK_STATUSES.map(status => {
           const colTasks = tasksByStatus[status.value as TaskStatus];
           return (
@@ -166,7 +197,7 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
             </DroppableColumn>
           );
         })}
-      </div>
+      </motion.div>
 
       <DragOverlay>
         {activeId ? (
