@@ -32,22 +32,36 @@ interface TaskKanbanProps {
   onDeleteTask: (id: string) => void;
 }
 
-function DroppableColumn({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function DroppableColumn({ id, title, count, children }: { id: string; title: string; count: number; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   
   return (
     <div 
       ref={setNodeRef} 
       className={cn(
-        "flex flex-col gap-4 min-w-[300px] h-full transition-colors p-2 rounded-2xl",
-        isOver && "bg-brand/5 ring-2 ring-brand/20 ring-inset"
+        "flex flex-col bg-bg-card/40 border border-border-main/50 rounded-3xl p-4 transition-all duration-300 max-h-[66vh] h-[66vh] w-[290px] md:w-[320px] shrink-0 gap-3 select-none",
+        isOver && "bg-brand/[0.04] border-brand/35 ring-1 ring-brand/10 shadow-inner"
       )}
     >
-      <div className="flex items-center justify-between px-2 py-1">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">{title}</h3>
-        <button className="p-1 hover:bg-bg-main rounded text-text-secondary"><MoreHorizontal className="w-3.5 h-3.5" /></button>
+      {/* Column Inner Header */}
+      <div className="flex items-center justify-between border-b border-border-main/40 pb-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">
+            {title}
+          </h3>
+          <span className="text-[9px] font-bold bg-bg-main border border-border-main text-text-secondary px-2 py-0.5 rounded-full shrink-0">
+            {count}
+          </span>
+        </div>
+        <button className="p-1 hover:bg-bg-main rounded text-text-secondary opacity-60 hover:opacity-100 transition-all cursor-pointer">
+          <MoreHorizontal className="w-3.5 h-3.5" />
+        </button>
       </div>
-      {children}
+
+      {/* Internal scroll wrapper with custom smooth scrollbar */}
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-fine-scrollbar min-h-0 pb-2">
+        {children}
+      </div>
     </div>
   );
 }
@@ -100,9 +114,9 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
       if (targetStatus === 'done') {
         try {
           confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.5 }
           });
         } catch (e) {
           console.error("Confetti error:", e);
@@ -118,32 +132,45 @@ export function TaskKanban({ tasks, onUpdateTask, onEditTask, onDeleteTask }: Ta
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-6 overflow-x-auto pb-4 min-h-[calc(100vh-350px)]">
-        {TASK_STATUSES.map(status => (
-          <DroppableColumn key={status.value} id={status.value} title={status.label}>
-            <SortableContext 
-              id={status.value}
-              items={tasksByStatus[status.value as TaskStatus].map(t => t.id)}
-              strategy={verticalListSortingStrategy}
+      <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 custom-fine-scrollbar animate-in fade-in duration-300">
+        {TASK_STATUSES.map(status => {
+          const colTasks = tasksByStatus[status.value as TaskStatus];
+          return (
+            <DroppableColumn 
+              key={status.value} 
+              id={status.value} 
+              title={status.label}
+              count={colTasks.length}
             >
-              <div className="flex flex-col gap-3 min-h-[100px]">
-                {tasksByStatus[status.value as TaskStatus].map(task => (
-                  <SortableTask 
-                    key={task.id} 
-                    task={task} 
-                    onUpdateTask={onUpdateTask} 
-                    onEditTask={onEditTask}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DroppableColumn>
-        ))}
+              <SortableContext 
+                id={status.value}
+                items={colTasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-3 min-h-[120px] pb-6">
+                  {colTasks.map(task => (
+                    <SortableTask 
+                      key={task.id} 
+                      task={task} 
+                      onUpdateTask={onUpdateTask} 
+                      onEditTask={onEditTask}
+                    />
+                  ))}
+                  {colTasks.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-border-main/40 rounded-2xl opacity-40 select-none">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary">Vazio</span>
+                    </div>
+                  )}
+                </div>
+              </SortableContext>
+            </DroppableColumn>
+          );
+        })}
       </div>
 
       <DragOverlay>
         {activeId ? (
-          <div className="opacity-80 scale-105 rotate-2">
+          <div className="opacity-85 scale-105 rotate-1 shadow-2xl">
             <TaskItem 
               task={tasks.find(t => t.id === activeId)!} 
               onUpdateTask={() => {}} 

@@ -218,4 +218,28 @@
   @apply text-3xl lg:text-4xl font-medium text-slate-400 mt-4;
 }
 
+/* Custom Fine Scrollbar Utility */
+.custom-fine-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 40, 217, 0.2) transparent;
+}
+
+.custom-fine-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-fine-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-fine-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.25);
+  border-radius: 9999px;
+}
+
+.custom-fine-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 40, 217, 0.45);
+}
+
 

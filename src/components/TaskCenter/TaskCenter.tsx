@@ -20,12 +20,21 @@ import {
   ChevronUp, 
   Info,
   Edit,
-  Zap
+  Zap,
+  Search,
+  X as CloseIcon,
+  LayoutGrid,
+  Layers
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from '../../lib/utils';
 import { Task, TaskType, TaskStatus, TaskPriority } from '../../types';
 import { TaskForm } from './TaskForm';
+import { TaskItem } from './TaskItem';
+import { TaskKanban } from './TaskKanban';
+import { TaskList } from './TaskList';
+import { TaskAgenda } from './TaskAgenda';
+import { CardSwipe } from './CardSwipe';
 
 interface TaskCenterProps {
   tasks: Task[];
@@ -41,6 +50,11 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showDoneHistory, setShowDoneHistory] = useState(false);
   
+  // Navigation & Filtering States
+  const [viewMode, setViewMode] = useState<'foco' | 'kanban' | 'lista' | 'agenda' | 'swipe'>('foco');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'important'>('all');
+
   // Fast Inline Adder State
   const [newTitle, setNewTitle] = useState('');
   const [isGolden, setIsGolden] = useState(false);
@@ -55,23 +69,51 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [runningTimers, setRunningTimers] = useState<Record<string, boolean>>({});
 
-  // Filter out tasks
+  // Central Dynamic Search and Quick Filter
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      // 1. Text Search matching
+      const query = searchTerm.trim().toLowerCase();
+      const matchesSearch = query === '' || 
+        task.title.toLowerCase().includes(query) || 
+        (task.description && task.description.toLowerCase().includes(query)) || 
+        (task.relatedClient && task.relatedClient.toLowerCase().includes(query)) ||
+        (task.tags && task.tags.some(tag => tag.toLowerCase().includes(query)));
+
+      if (!matchesSearch) return false;
+
+      // 2. Quick filters
+      if (statusFilter === 'pending') {
+        return task.status !== 'done' && !task.completed;
+      }
+      if (statusFilter === 'completed') {
+        return task.status === 'done' || task.completed;
+      }
+      if (statusFilter === 'important') {
+        return task.important || task.isGolden;
+      }
+
+      return true; // 'all'
+    });
+  }, [tasks, searchTerm, statusFilter]);
+
+  // Filter out tasks relative to search/filter limits
   const pendingTasks = useMemo(() => {
-    return tasks
+    return filteredTasks
       .filter(t => t.status !== 'done' && !t.completed)
       .sort((a, b) => {
         // Golden tasks first, then by date created
         if (a.isGolden && !b.isGolden) return -1;
         if (!a.isGolden && b.isGolden) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
       });
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const completedTasks = useMemo(() => {
-    return tasks
+    return filteredTasks
       .filter(t => t.status === 'done' || t.completed)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [tasks]);
+      .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+  }, [filteredTasks]);
 
   // Handle active focus tasks
   const activeFocusTasks = useMemo(() => {
@@ -127,7 +169,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
       title: newTitle.trim(),
       description: '',
       completed: false,
-      status: 'today',
+      status: 'inbox',
       type: taskType,
       priority: taskPriority,
       important: isImportant,
@@ -190,14 +232,14 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl mx-auto animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto animate-in fade-in duration-500 pb-16">
       
       {/* Top Title/Intro Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-main/50 pb-4">
         <div>
-          <h1 className="text-3xl font-heading font-black text-text-main tracking-tight">Bloco de Notas & Tarefas</h1>
+          <h1 className="text-3xl font-heading font-black text-text-main tracking-tight">Registro de Backup & Tarefas</h1>
           <p className="text-xs text-text-secondary mt-1 font-semibold uppercase tracking-wider">
-            Anote suas pendências rapidamente, acumule XP e domine a infraestrutura
+            Consulte e organize suas pendências de infraestrutura de forma ágil e acumule XP
           </p>
         </div>
         
@@ -264,10 +306,10 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
               type="button"
               onClick={() => {
                 setIsGolden(!isGolden);
-                if (!isGolden) setIsImportant(false); // mutually exclusive or just additive? Let's allow either
+                if (!isGolden) setIsImportant(false);
               }}
               className={cn(
-                "p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer",
+                "p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer select-none",
                 isGolden
                   ? "border-amber-400 bg-amber-500/10 text-amber-500 shadow-md"
                   : "border-border-main bg-bg-main/50 text-text-secondary hover:border-amber-400/50 hover:text-amber-500"
@@ -285,7 +327,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
                 if (!isImportant) setIsGolden(false);
               }}
               className={cn(
-                "p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer",
+                "p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer select-none",
                 isImportant
                   ? "border-purple-400 bg-purple-500/10 text-purple-500 shadow-md"
                   : "border-border-main bg-bg-main/50 text-text-secondary hover:border-purple-400/50 hover:text-purple-500"
@@ -338,304 +380,382 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
         )}
       </form>
 
-      {/* TWO COLUMNS OPERATIONAL LAYOUT: Task List & Focused Work Clock */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* LEFT COLUMN: ACTIVE TASKS (lg:col-span-7) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-heading font-black text-text-main flex items-center gap-2">
-              <Zap className="w-5 h-5 text-brand" />
-              Tarefas Operacionais Ativas ({pendingTasks.length})
-            </h2>
-          </div>
+      {/* 2. NAVIGATION AND SEARCH/FILTER CONTROLS BAR */}
+      <div className="bg-bg-card border border-border-main rounded-3xl p-5 shadow-sm space-y-4">
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-main/50 pb-4">
+          <button
+            type="button"
+            onClick={() => setViewMode('foco')}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer select-none active:scale-95",
+              viewMode === 'foco'
+                ? "bg-brand text-white shadow-md shadow-brand/20"
+                : "bg-bg-main/50 hover:bg-bg-main text-text-secondary hover:text-text-main border border-border-main/40"
+            )}
+          >
+            <Zap className="w-4 h-4" />
+            Painel Operacional
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setViewMode('kanban')}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer select-none active:scale-95",
+              viewMode === 'kanban'
+                ? "bg-brand text-white shadow-md shadow-brand/20"
+                : "bg-bg-main/50 hover:bg-bg-main text-text-secondary hover:text-text-main border border-border-main/40"
+            )}
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Quadro Kanban
+          </button>
 
-          {pendingTasks.length > 0 ? (
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-              {pendingTasks.map((task) => {
-                const isTaskOverdue = task.dueDate && new Date(task.dueDate) < new Date();
-                
-                return (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      "group relative flex items-start gap-4 p-4 border rounded-2xl bg-bg-card transition-all hover:bg-bg-card/90",
-                      task.isGolden 
-                        ? "border-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.06)] ring-1 ring-amber-400/30" 
-                        : "border-border-main hover:border-brand/30"
-                    )}
-                  >
-                    {/* Big Checkbox on Left */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleComplete(task)}
-                      className={cn(
-                        "mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all cursor-pointer",
-                        task.isGolden 
-                          ? "border-amber-400 hover:bg-amber-500/20 text-amber-500" 
-                          : "border-text-secondary/40 hover:border-brand text-brand bg-bg-main"
-                      )}
-                    >
-                      <Check className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('lista')}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer select-none active:scale-95",
+              viewMode === 'lista'
+                ? "bg-brand text-white shadow-md shadow-brand/20"
+                : "bg-bg-main/50 hover:bg-bg-main text-text-secondary hover:text-text-main border border-border-main/40"
+            )}
+          >
+            <Layers className="w-4 h-4" />
+            Lista & Agrupamentos
+          </button>
 
-                    {/* Central Area: Info */}
-                    <div className="flex-1 space-y-1.5 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {task.relatedClient && (
-                          <span className="text-[9px] font-black tracking-widest text-brand uppercase bg-brand/5 px-2 py-0.5 rounded-md">
-                            {task.relatedClient}
-                          </span>
-                        )}
-                        {task.isGolden && (
-                          <span className="flex items-center gap-1 text-[8px] font-extrabold tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md uppercase">
-                            👑 Ouro (+50 XP)
-                          </span>
-                        )}
-                        {task.important && (
-                          <span className="flex items-center gap-1 text-[8px] font-extrabold tracking-widest text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md uppercase">
-                            ⭐ Importante (+25 XP)
-                          </span>
-                        )}
-                        {task.duration ? (
-                          <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {task.duration} min
-                          </span>
-                        ) : null}
-                      </div>
+          <button
+            type="button"
+            onClick={() => setViewMode('agenda')}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer select-none active:scale-95",
+              viewMode === 'agenda'
+                ? "bg-brand text-white shadow-md shadow-brand/20"
+                : "bg-bg-main/50 hover:bg-bg-main text-text-secondary hover:text-text-main border border-border-main/40"
+            )}
+          >
+            <Calendar className="w-4 h-4" />
+            Agenda Semanal
+          </button>
 
-                      <h3 
-                        className={cn(
-                          "font-heading font-black text-sm text-text-main tracking-tight leading-snug cursor-pointer hover:text-brand transition-colors break-words",
-                          task.isGolden && "text-amber-500 dark:text-amber-400"
-                        )}
-                        onClick={() => { setEditingTask(task); setIsFormOpen(true); }}
-                      >
-                        {task.title}
-                      </h3>
-
-                      {task.description && (
-                        <p className="text-text-secondary text-xs line-clamp-2 leading-relaxed">
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* Small action chips footer */}
-                      <div className="flex items-center gap-3 pt-1">
-                        {/* Play Focus Mode button if task has duration */}
-                        {task.duration && task.duration > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newStatus: TaskStatus = task.status === 'doing' ? 'today' : 'doing';
-                              onUpdateTask(task.id, { status: newStatus });
-                              
-                              // Start countdown running state if enabled
-                              if (newStatus === 'doing') {
-                                setRunningTimers(prev => ({ ...prev, [task.id]: true }));
-                              }
-                            }}
-                            className={cn(
-                              "flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-xl transition-all border cursor-pointer active:scale-95",
-                              task.status === 'doing'
-                                ? "bg-amber-500/15 border-amber-500/30 text-amber-500 animate-pulse"
-                                : "bg-teal-500/5 border-teal-500/15 text-teal-600 hover:bg-teal-500/10"
-                            )}
-                          >
-                            {task.status === 'doing' ? (
-                              <>
-                                <Pause className="w-3 h-3 fill-amber-500" /> Pausar Foco
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3 fill-teal-600" /> Iniciar Foco
-                              </>
-                            )}
-                          </button>
-                        ) : null}
-
-                        {/* Mark Golden manually toggle link */}
-                        <button
-                          type="button"
-                          onClick={() => onUpdateTask(task.id, { isGolden: !task.isGolden })}
-                          className="text-[10px] font-bold text-text-secondary hover:text-amber-500 flex items-center gap-0.5"
-                        >
-                          <Crown className="w-3 h-3" /> Ouro
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => onUpdateTask(task.id, { important: !task.important })}
-                          className="text-[10px] font-bold text-text-secondary hover:text-purple-500 flex items-center gap-0.5"
-                        >
-                          <Star className="w-3 h-3" /> Importante
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Actions On Hover: Edit & Delete */}
-                    <div className="flex items-center gap-1.5 self-start shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => { setEditingTask(task); setIsFormOpen(true); }}
-                        className="p-1.5 rounded-lg text-text-secondary hover:bg-bg-main hover:text-text-main transition-colors"
-                        title="Configurações completas"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteTask(task.id)}
-                        className="p-1.5 rounded-lg text-text-secondary hover:bg-danger/10 hover:text-danger hover:scale-105 transition-all"
-                        title="Deletar tarefa"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-12 text-center bg-bg-card/50 border border-border-main rounded-3xl">
-              <div className="p-3 bg-brand/10 border border-brand/20 text-brand rounded-2xl mb-4">
-                <CheckCircle2 className="w-7 h-7" />
-              </div>
-              <h3 className="font-heading font-black text-sm text-text-main">Lista vazia!</h3>
-              <p className="text-text-secondary text-xs mt-1 max-w-[280px]">
-                Nenhuma tarefa operacional pendente. Digite uma nova no campo acima!
-              </p>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setViewMode('swipe')}
+            className={cn(
+              "px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer select-none active:scale-95",
+              viewMode === 'swipe'
+                ? "bg-brand text-white shadow-md shadow-brand/20"
+                : "bg-bg-main/50 hover:bg-bg-main text-text-secondary hover:text-text-main border border-border-main/40"
+            )}
+          >
+            <Sparkles className="w-4 h-4" />
+            Swipe de Cartões
+          </button>
         </div>
 
-        {/* RIGHT COLUMN: FOCUSED WORK POMODORO / ACTIVE TIMERS (lg:col-span-5) */}
-        <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-lg font-heading font-black text-text-main flex items-center gap-2">
-            <Flame className="w-5 h-5 text-amber-500 fill-amber-500 animate-pulse" />
-            Trabalho Focado & Cronômetro
-          </h2>
+        {/* Search & Filter Buttons Row */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Search bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary/60" />
+            <input
+              type="text"
+              placeholder="Pesquise por autor, título, descrição, cliente ou tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-bg-main border border-border-main rounded-2xl pl-11 pr-10 py-3 text-xs font-semibold text-text-main placeholder:text-text-secondary/40 outline-none focus:border-brand/70 focus:ring-1 focus:ring-brand/20 transition-all shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-text-secondary hover:text-text-main hover:bg-bg-main/80 transition-colors"
+              >
+                <CloseIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
-          {activeFocusTasks.length > 0 ? (
-            <div className="space-y-4">
-              {activeFocusTasks.map(task => {
-                const secondsLeft = timers[task.id] ?? 0;
-                const isTimerRunning = runningTimers[task.id] ?? false;
-                
-                // Calculate percentage
-                const totalSecs = (task.duration || 1) * 60;
-                const pctLeft = (secondsLeft / totalSecs) * 100;
+          {/* Quick Filters */}
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-black text-text-secondary uppercase mr-2 tracking-wider">Filtro rápido:</span>
+            
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95",
+                statusFilter === 'all'
+                  ? "bg-brand/10 text-brand border border-brand/25"
+                  : "bg-bg-main border border-border-main text-text-secondary hover:text-text-main"
+              )}
+            >
+              Todas
+            </button>
 
-                return (
-                  <div 
-                    key={task.id}
-                    className="p-6 bg-gradient-to-b from-amber-500/[0.05] to-transparent border border-amber-500/25 rounded-3xl shadow-[0_8px_30px_rgba(245,158,11,0.04)] space-y-5"
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
-                        <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-bounce" />
-                        Modo Foco Em Andamento
-                      </div>
-                      <h3 className="font-heading font-black text-base text-text-main mt-1 tracking-tight truncate">
-                        {task.title}
-                      </h3>
-                      {task.relatedClient && (
-                        <span className="text-[9px] font-black text-brand tracking-wider uppercase mt-1 inline-block">
-                          {task.relatedClient}
-                        </span>
-                      )}
-                    </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('pending')}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95",
+                statusFilter === 'pending'
+                  ? "bg-orange-500/10 text-orange-600 dark:text-orange-450 border border-orange-500/25"
+                  : "bg-bg-main border border-border-main text-text-secondary hover:text-text-main"
+              )}
+            >
+              Pendentes
+            </button>
 
-                    {/* Numeric Big Countdown */}
-                    <div className="flex flex-col items-center justify-center py-4 bg-bg-main/40 rounded-2xl border border-border-main">
-                      <span className="font-mono text-4xl font-extrabold tracking-wider text-amber-600 dark:text-amber-400 animate-pulse">
-                        {formatTime(secondsLeft)}
-                      </span>
-                      <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest mt-1">
-                        Tempo de Foco Restante
-                      </p>
-                    </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('completed')}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95",
+                statusFilter === 'completed'
+                  ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/25"
+                  : "bg-bg-main border border-border-main text-text-secondary hover:text-text-main"
+              )}
+            >
+              Concluídas
+            </button>
 
-                    {/* Progress indicator bar */}
-                    <div className="h-1.5 w-full bg-border-main rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-amber-500 transition-all duration-1000"
-                        style={{ width: `${pctLeft}%` }}
-                      />
-                    </div>
-
-                    {/* Focus Controllers Row */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        {/* Play/Pause Button */}
-                        <button
-                          type="button"
-                          onClick={() => setRunningTimers(prev => ({ ...prev, [task.id]: !isTimerRunning }))}
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90",
-                            isTimerRunning 
-                              ? "bg-slate-700 hover:bg-slate-600 text-white" 
-                              : "bg-amber-500 hover:bg-amber-600 text-white"
-                          )}
-                        >
-                          {isTimerRunning ? <Pause className="w-4.5 h-4.5" /> : <Play className="w-4.5 h-4.5 fill-white" />}
-                        </button>
-
-                        {/* Reset duration */}
-                        <button
-                          type="button"
-                          onClick={() => setTimers(prev => ({ ...prev, [task.id]: (task.duration || 0) * 60 }))}
-                          className="w-10 h-10 rounded-xl bg-bg-main hover:bg-bg-main/80 border border-border-main flex items-center justify-center transition-all cursor-pointer text-text-secondary font-bold active:scale-90"
-                          title="Recomeçar tempo"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* CONCLUDE COMPLETED DIRECTLY button */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleComplete(task)}
-                        className="flex-1 max-w-[200px] bg-brand hover:bg-brand-dark hover:shadow-lg hover:shadow-brand/20 text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Concluir Foco
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* Focus Helper Legend Box */
-            <div className="p-6 bg-bg-card/50 border border-border-main rounded-3xl text-center space-y-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-600 mx-auto">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-heading font-black text-xs text-text-main uppercase tracking-wider">Aumente sua produtividade</h3>
-                <p className="text-text-secondary text-xs max-w-[300px] mx-auto leading-relaxed">
-                  Adicione uma duração em minutos a qualquer tarefa e clique em <strong>"Iniciar Foco"</strong> para focar nela com um cronômetro regressivo profissional.
-                </p>
-              </div>
-              
-              <div className="bg-bg-main/50 p-3 rounded-xl border border-border-main text-left text-[11px] space-y-1.5 font-medium text-text-secondary">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0"></span>
-                  Garante bônus extra de de <strong className="text-text-main font-bold">+15 XP</strong> se focar por mais de 60 minutos.
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full shrink-0"></span>
-                  Mantém você 100% livre de distrações e operacional.
-                </div>
-              </div>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setStatusFilter('important')}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-1.5",
+                statusFilter === 'important'
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/25"
+                  : "bg-bg-main border border-border-main text-text-secondary hover:text-text-main"
+              )}
+            >
+              <Star className="w-3.5 h-3.5 fill-purple-500/10 text-purple-500" />
+              Importantes
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 2. COMPLETED HISTORIC ACCORDION (Z-Index / Stack safe) */}
-      <div className="bg-bg-card border border-border-main rounded-3xl overflow-hidden mt-2">
+      {/* 3. CONDITIONAL RENDER ACCORDING TO VIEW MODE */}
+      <div className="min-h-[400px]">
+        {viewMode === 'foco' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-300">
+            
+            {/* LEFT COLUMN: ACTIVE TASKS (lg:col-span-7) */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-heading font-black text-text-main flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-brand" />
+                  Filtradas no Painel ({pendingTasks.length})
+                </h2>
+              </div>
+
+              {pendingTasks.length > 0 ? (
+                <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-fine-scrollbar pb-6">
+                  {pendingTasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onUpdateTask={onUpdateTask}
+                      onEditTask={(t) => { setEditingTask(t); setIsFormOpen(true); }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-12 text-center bg-bg-card/50 border border-border-main rounded-3xl">
+                  <div className="p-3 bg-brand/10 border border-brand/20 text-brand rounded-2xl mb-4">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <h3 className="font-heading font-black text-sm text-text-main">Vazio ou Reduzido!</h3>
+                  <p className="text-text-secondary text-xs mt-1 max-w-[280px]">
+                    Nenhuma tarefa operacional pendente que corresponda aos filtros e busca ativos.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT COLUMN: FOCUSED WORK POMODORO / ACTIVE TIMERS (lg:col-span-5) */}
+            <div className="lg:col-span-5 space-y-4">
+              <h2 className="text-lg font-heading font-black text-text-main flex items-center gap-2">
+                <Flame className="w-5 h-5 text-amber-500 fill-amber-500 animate-pulse" />
+                Trabalho Focado & Cronômetro
+              </h2>
+
+              {activeFocusTasks.length > 0 ? (
+                <div className="space-y-4">
+                  {activeFocusTasks.map(task => {
+                    const secondsLeft = timers[task.id] ?? 0;
+                    const isTimerRunning = runningTimers[task.id] ?? false;
+                    
+                    // Calculate percentage
+                    const totalSecs = (task.duration || 1) * 60;
+                    const pctLeft = (secondsLeft / totalSecs) * 100;
+
+                    return (
+                      <div 
+                        key={task.id}
+                        className="p-6 bg-gradient-to-b from-amber-500/[0.05] to-transparent border border-amber-500/25 rounded-3xl shadow-[0_8px_30px_rgba(245,158,11,0.04)] space-y-5"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                            <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-bounce" />
+                            Modo Foco Em Andamento
+                          </div>
+                          <h3 className="font-heading font-black text-base text-text-main mt-1 tracking-tight truncate">
+                            {task.title}
+                          </h3>
+                          {task.relatedClient && (
+                            <span className="text-[9px] font-black text-brand tracking-wider uppercase mt-1 inline-block">
+                              {task.relatedClient}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Numeric Big Countdown */}
+                        <div className="flex flex-col items-center justify-center py-4 bg-bg-main/40 rounded-2xl border border-border-main">
+                          <span className="font-mono text-4xl font-extrabold tracking-wider text-amber-600 dark:text-amber-400 animate-pulse">
+                            {formatTime(secondsLeft)}
+                          </span>
+                          <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest mt-1">
+                            Tempo de Foco Restante
+                          </p>
+                        </div>
+
+                        {/* Progress indicator bar */}
+                        <div className="h-1.5 w-full bg-border-main rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-amber-500 transition-all duration-1000"
+                            style={{ width: `${pctLeft}%` }}
+                          />
+                        </div>
+
+                        {/* Focus Controllers Row */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            {/* Play/Pause Button */}
+                            <button
+                              type="button"
+                              onClick={() => setRunningTimers(prev => ({ ...prev, [task.id]: !isTimerRunning }))}
+                              className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90",
+                                isTimerRunning 
+                                  ? "bg-slate-700 hover:bg-slate-600 text-white" 
+                                  : "bg-amber-500 hover:bg-amber-600 text-white"
+                              )}
+                            >
+                              {isTimerRunning ? <Pause className="w-4.5 h-4.5" /> : <Play className="w-4.5 h-4.5 fill-white" />}
+                            </button>
+
+                            {/* Reset duration */}
+                            <button
+                              type="button"
+                              onClick={() => setTimers(prev => ({ ...prev, [task.id]: (task.duration || 0) * 60 }))}
+                              className="w-10 h-10 rounded-xl bg-bg-main hover:bg-bg-main/80 border border-border-main flex items-center justify-center transition-all cursor-pointer text-text-secondary font-bold active:scale-90"
+                              title="Recomeçar tempo"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* CONCLUDE COMPLETED DIRECTLY button */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleComplete(task)}
+                            className="flex-1 max-w-[200px] bg-brand hover:bg-brand-dark hover:shadow-lg hover:shadow-brand/20 text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Concluir Foco
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Focus Helper Legend Box */
+                <div className="p-6 bg-bg-card/50 border border-border-main rounded-3xl text-center space-y-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-600 mx-auto">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-heading font-black text-xs text-text-main uppercase tracking-wider">Aumente sua produtividade</h3>
+                    <p className="text-text-secondary text-xs max-w-[300px] mx-auto leading-relaxed">
+                      Adicione uma duração em minutos a qualquer tarefa e mude o status para em andamento para focar nela com um cronômetro regressivo profissional.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-bg-main/50 p-3 rounded-xl border border-border-main text-left text-[11px] space-y-1.5 font-medium text-text-secondary">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0"></span>
+                      Garante bônus extra de de <strong className="text-text-main font-bold">+15 XP</strong> se focar por mais de 60 minutos.
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-teal-500 rounded-full shrink-0"></span>
+                      Mantém você focado na atividade do momento.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'kanban' && (
+          <div className="bg-bg-card border border-border-main rounded-3xl p-6 shadow-sm overflow-hidden animate-in fade-in duration-300">
+            <div className="flex items-center gap-3 border-b border-border-main/50 pb-4 mb-6">
+              <LayoutGrid className="w-5 h-5 text-brand" />
+              <div>
+                <h2 className="text-lg font-heading font-black text-text-main tracking-tight uppercase">Quadro Kanban Operacional</h2>
+                <p className="text-[10px] text-text-secondary font-semibold uppercase tracking-widest">Organize e monitore seus fluxos de trabalho com drag & drop</p>
+              </div>
+            </div>
+            
+            <TaskKanban 
+              tasks={filteredTasks} 
+              onUpdateTask={onUpdateTask} 
+              onEditTask={(task) => { setEditingTask(task); setIsFormOpen(true); }}
+              onDeleteTask={onDeleteTask}
+            />
+          </div>
+        )}
+
+        {viewMode === 'lista' && (
+          <div className="animate-in fade-in duration-300">
+            <TaskList 
+              tasks={filteredTasks} 
+              onUpdateTask={onUpdateTask} 
+              onEditTask={(task) => { setEditingTask(task); setIsFormOpen(true); }}
+            />
+          </div>
+        )}
+
+        {viewMode === 'agenda' && (
+          <div className="animate-in fade-in duration-300">
+            <TaskAgenda 
+              tasks={filteredTasks} 
+              viewMode="agenda"
+              onUpdateTask={onUpdateTask} 
+              onEditTask={(task) => { setEditingTask(task); setIsFormOpen(true); }}
+            />
+          </div>
+        )}
+
+        {viewMode === 'swipe' && (
+          <div className="animate-in fade-in duration-300">
+            <CardSwipe 
+              tasks={filteredTasks} 
+              onUpdateTask={onUpdateTask} 
+              onEditTask={(task) => { setEditingTask(task); setIsFormOpen(true); }}
+              onAddNew={() => setIsFormOpen(true)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 4. COMPLETED HISTORIC ACCORDION */}
+      <div className="bg-bg-card border border-border-main rounded-3xl overflow-hidden mt-4">
         <button
           type="button"
           onClick={() => setShowDoneHistory(!showDoneHistory)}
@@ -649,7 +769,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
         </button>
 
         {showDoneHistory && (
-          <div className="p-5 border-t border-border-main/50 space-y-3 max-h-[300px] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+          <div className="p-5 border-t border-border-main/50 space-y-3 max-h-[300px] overflow-y-auto custom-fine-scrollbar animate-in slide-in-from-bottom duration-300">
             {completedTasks.length > 0 ? (
               completedTasks.map(task => {
                 // Calculate simulated base XP earned
@@ -659,7 +779,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
                 if (task.duration && task.duration > 60) baseXP += 15;
 
                 return (
-                  <div
+                   <div
                     key={task.id}
                     className="flex items-center justify-between p-3 border border-border-main/40 bg-bg-main/10 rounded-xl group transition-all"
                   >
@@ -691,7 +811,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
                       <button
                         type="button"
                         onClick={() => onDeleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-text-secondary hover:text-danger rounded-lg transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-text-secondary hover:text-danger rounded-lg transition-opacity cursor-pointer"
                         title="Deletar histórico"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -702,7 +822,7 @@ export function TaskCenter({ tasks, onAddTask, onUpdateTask, onDeleteTask, defau
               })
             ) : (
               <p className="text-center text-xs font-semibold text-text-secondary py-6 uppercase tracking-widest">
-                Nenhum histórico operacional concluído ainda hoje.
+                Nenhuma tarefa operacional concluída ativa sob os filtros atuais.
               </p>
             )}
           </div>
