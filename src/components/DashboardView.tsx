@@ -123,7 +123,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
   const pieData = [
     { name: 'Sucesso', value: success, color: '#10B981' }, // Emerald GP05
     { name: 'Aviso', value: warning, color: '#F59E0B' },   // Amber GP05
-    { name: 'Falha', value: failed, color: '#EF4444' },    // Red GP05
+    { name: 'Falha', value: failed, color: '#F43F5E' },    // Rose-Red GP05
   ];
 
   // Daily Trend Data grouped day by day, displaying weekdays beautifully
@@ -416,7 +416,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
                 />
                 <Bar dataKey="sucesso" name="Sucesso" stackId="a" fill="#10B981" />
                 <Bar dataKey="alerta" name="Alerta" stackId="a" fill="#F59E0B" />
-                <Bar dataKey="falha" name="Falha" stackId="a" fill="#EF4444" />
+                <Bar dataKey="falha" name="Falha" stackId="a" fill="#F43F5E" />
               </BarChart>
             </ResponsiveContainer>
           </div>

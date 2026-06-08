@@ -57,23 +57,23 @@
   }
 
   .dark {
-    --color-bg-main: #111827;
-    --color-bg-card: #1F2937;
-    --color-bg-sidebar: #111827;
+    --color-bg-main: #0B0F19;
+    --color-bg-card: rgba(17, 24, 39, 0.45);
+    --color-bg-sidebar: #0F1524;
     
     --color-text-main: #F9FAFB;
     --color-text-secondary: #9CA3AF;
     
-    --color-border-main: #374151;
-    --color-border-card: #374151;
+    --color-border-main: rgba(255, 255, 255, 0.08); /* super subtle grid style border */
+    --color-border-card: rgba(255, 255, 255, 0.05);
     
     --color-brand: #8b5cf6;
-    --color-brand-light: #2e1065;
+    --color-brand-light: rgba(139, 92, 246, 0.1);
     --color-brand-dark: #a78bfa;
     
-    --color-success: #34d399;
-    --color-warning: #fbbf24;
-    --color-danger: #f87171;
+    --color-success: #10B981; /* Verde Esmeralda GP05 */
+    --color-warning: #F59E0B; /* Amarelo Amber GP05 */
+    --color-danger: #F43F5E;  /* Vermelho Rose GP05 vibrant */
     
     --shadow-card: none;
 
@@ -84,20 +84,74 @@
   }
 
   body {
-    @apply bg-bg-main text-text-main font-sans transition-colors duration-200;
+    @apply bg-bg-main text-text-main font-sans transition-colors duration-200 relative;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-bg-card rounded-xl p-6 transition-all duration-200;
-    box-shadow: var(--shadow-card);
-    border: 1px solid var(--color-border-card);
+    @apply bg-bg-card/75 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 border border-border-main/20 relative;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.02), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+  }
+  
+  .card:hover {
+    @apply shadow-xl border-brand/25;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06), 0 0 20px rgba(139, 92, 246, 0.06);
+    transform: translateY(-2px);
+  }
+
+  .dark .card {
+    @apply bg-bg-card/45 backdrop-blur-md border-white/5;
+    box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.5);
+  }
+  
+  .dark .card:hover {
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px rgba(139, 92, 246, 0.12);
+    @apply border-brand/35;
   }
   
   .sidebar {
-    @apply bg-bg-sidebar border-r border-border-main transition-colors duration-200;
+    @apply bg-bg-sidebar border-r border-border-main/50 transition-colors duration-200;
   }
+}
+
+/* Premium Background Pattern and Radial Ambience Glow */
+.premium-bg-layout {
+  position: relative;
+  background-color: var(--color-bg-main);
+}
+
+.premium-bg-layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-size: 32px 32px;
+  background-image: 
+    radial-gradient(circle, rgba(139, 92, 246, 0.025) 1px, transparent 1px);
+}
+
+.dark .premium-bg-layout::before {
+  background-image: 
+    radial-gradient(circle, rgba(255, 255, 255, 0.015) 1.2px, transparent 1.2px);
+}
+
+.premium-bg-layout::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 100% 60%, rgba(16, 185, 129, 0.02) 0%, transparent 45%);
+}
+
+.dark .premium-bg-layout::after {
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(139, 92, 246, 0.1) 0%, transparent 55%),
+    radial-gradient(circle at 100% 60%, rgba(16, 185, 129, 0.03) 0%, transparent 45%);
 }
 
 /* Presentation Mode Styles */

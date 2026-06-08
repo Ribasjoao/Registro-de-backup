@@ -26,9 +26,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-xl bg-bg-card rounded-xl shadow-2xl overflow-hidden border border-border-main"
+            className="relative w-full max-w-xl bg-bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-border-main/50 dark:border-white/10"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-main">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-main/50 dark:border-white/5">
               <h2 className="font-heading text-xl font-bold text-text-main">{title}</h2>
               <button
                 onClick={onClose}
@@ -49,9 +49,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
 export function StatusBadge({ status }: { status: string }) {
   const styles = {
-    success: "bg-green-100 text-green-700 border-green-200",
-    warning: "bg-amber-100 text-amber-700 border-amber-200",
-    failed: "bg-red-100 text-red-700 border-red-200",
+    success: "bg-success/10 text-success border-success/25 dark:bg-success/10 dark:text-success dark:border-success/20",
+    warning: "bg-warning/10 text-warning border-warning/25 dark:bg-warning/10 dark:text-warning dark:border-warning/20",
+    failed: "bg-danger/10 text-danger border-danger/25 dark:bg-danger/10 dark:text-danger dark:border-danger/20",
   };
 
   const icons = {

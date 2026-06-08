@@ -623,7 +623,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-screen overflow-hidden bg-bg-main transition-colors duration-300",
+      "flex h-screen overflow-hidden premium-bg-layout transition-colors duration-300",
       isPresentationMode && "presentation-mode"
     )}>
       {isPresentationMode && (

@@ -80,13 +80,13 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
   return (
     <div 
       className={cn(
-        "group relative bg-bg-card border rounded-2xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer select-none",
+        "group relative bg-bg-card/75 dark:bg-bg-card/45 backdrop-blur-md border rounded-2xl p-4 transition-all duration-300 cursor-pointer select-none",
         task.isGolden 
-          ? "border-amber-400 bg-amber-500/[0.03] dark:bg-amber-400/[0.01] hover:shadow-amber-500/5 hover:border-amber-400" 
-          : "border-border-main hover:border-brand/40",
-        task.status === 'done' && "opacity-60",
-        task.status === 'blocked' && "border-danger/30 bg-danger/[0.02]",
-        task.status === 'waiting' && "border-warning/30 bg-warning/[0.02]"
+          ? "border-amber-400/80 bg-amber-500/[0.05] dark:bg-amber-400/[0.02] shadow-[0_0_10px_rgba(245,158,11,0.05)] hover:shadow-[0_0_15px_rgba(245,158,11,0.15)] hover:border-amber-400" 
+          : "border-border-main/50 dark:border-white/5 hover:border-brand/40 hover:translate-y-[-2px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.03)] dark:hover:shadow-[0_0_15px_rgba(139,92,246,0.15)]",
+        task.status === 'done' && "opacity-45 hover:translate-y-0 hover:shadow-none",
+        task.status === 'blocked' && "border-danger/40 bg-danger/[0.03] dark:bg-danger/[0.015] dark:hover:shadow-[0_0_15px_rgba(244,63,94,0.12)]",
+        task.status === 'waiting' && "border-warning/40 bg-warning/[0.03] dark:bg-warning/[0.015] dark:hover:shadow-[0_0_15px_rgba(245,158,11,0.12)]"
       )}
       onClick={handleCardClick}
     >
