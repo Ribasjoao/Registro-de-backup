@@ -6,16 +6,6 @@ import {
   type PanInfo,
   type Transition,
 } from 'motion/react';
-import { HugeiconsIcon } from '@hugeicons/react';
-import {
-  Book02Icon,
-  Brain02Icon,
-  DropletFreeIcons,
-  RunningShoesIcon,
-  SwimmingIcon,
-} from '@hugeicons/core-free-icons';
-import { cn } from '../../lib/utils';
-import { Task, TaskPriority, TaskType, TaskStatus } from '../../types';
 import { 
   Crown, 
   Clock, 
@@ -30,9 +20,16 @@ import {
   Circle, 
   Calendar,
   AlertTriangle,
-  Plus
+  Plus,
+  BookOpen,
+  Brain,
+  Target,
+  Wrench,
+  Footprints
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { cn } from '../../lib/utils';
+import { Task, TaskPriority, TaskType, TaskStatus } from '../../types';
 
 interface CardSwipeProps {
   tasks: Task[];
@@ -53,22 +50,22 @@ const SPRING_OPTIONS: Transition = {
   damping: 30,
 };
 
-const getHugeiconForType = (type: string) => {
+const getIconForType = (type: string) => {
   switch (type) {
     case 'rotina':
-      return Book02Icon;
+      return BookOpen;
     case 'incidente':
-      return Brain02Icon;
+      return Brain;
     case 'plano_de_acao':
-      return SwimmingIcon;
+      return Target;
     case 'follow_up':
-      return RunningShoesIcon;
+      return Footprints;
     case 'melhoria':
-      return DropletFreeIcons;
+      return Wrench;
     case 'apresentacao':
-      return Brain02Icon;
+      return Sparkles;
     default:
-      return Book02Icon;
+      return BookOpen;
   }
 };
 
@@ -160,7 +157,7 @@ const CarouselCard: React.FC<CarouselCardProps> = ({
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
   };
 
-  const currentIcon = getHugeiconForType(task.type);
+  const IconComponent = getIconForType(task.type);
 
   // Trigger confetti and update to 'done' status
   const handleComplete = (e: React.MouseEvent) => {
@@ -218,9 +215,8 @@ const CarouselCard: React.FC<CarouselCardProps> = ({
               ? "border-amber-400 bg-amber-500/10 text-amber-500" 
               : "border-border-main bg-bg-main text-brand"
           )}>
-            <HugeiconsIcon
-              icon={currentIcon}
-              size={28}
+            <IconComponent
+              className="w-7 h-7"
               strokeWidth={1.8}
             />
           </div>

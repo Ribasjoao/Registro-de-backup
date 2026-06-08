@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'pwa-icon.svg'],
       manifest: {
-        name: 'Gate7',
-        short_name: 'Gate7',
-        description: 'Gate7 - Gestão de Infraestrutura e Gamificação',
+        name: 'Registro de Backup',
+        short_name: 'Registro de Backup',
+        description: 'Registro de Backup - Gestão de Infraestrutura e Gamificação',
         theme_color: '#6d28d9',
         background_color: '#111827',
         display: 'standalone',

@@ -161,9 +161,9 @@ export function LiquidMetalCanvas({
           finalColor = reflectCol * (0.45 + diffuse * 0.55) + vec3(specular * 0.85);
           
         } else if (u_preset < 3.5) {
-          // Preset 3: Neon Indigo/Pink/Cyan Holographic Gate7
+          // Preset 3: Neon Indigo/Pink/Cyan Holographic Registro de Backup
           vec3 colDark = vec3(0.12, 0.01, 0.26);
-          vec3 colMid = vec3(0.50, 0.10, 0.85); // Purple Gate7 brand
+          vec3 colMid = vec3(0.50, 0.10, 0.85); // Purple brand color
           vec3 colLight = vec3(0.00, 0.94, 1.00); // Aqua Cyan
           
           vec3 holoRainbow = vec3(

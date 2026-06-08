@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { awardXP } from './lib/xpService';
 import { motion } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -65,7 +64,7 @@ import {
   OperationType,
   User
 } from './firebase';
-import { generateRecurrentTasks } from './lib/taskService';
+import { useTasks } from './hooks/useTasks';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
 
 type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings';
@@ -93,7 +92,14 @@ export default function App() {
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [destinations, setDestinations] = useState<StorageDestination[]>([]);
   const [backupTypes, setBackupTypes] = useState<BackupType[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const {
+    tasks,
+    addTask,
+    updateTask,
+    deleteTask,
+    toggleTask,
+    toggleImportant
+  } = useTasks(user?.uid ?? undefined, user?.displayName || user?.email);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [editingBackup, setEditingBackup] = useState<BackupRecord | undefined>(undefined);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -250,25 +256,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user || tasks.length === 0 || hasGeneratedToday.current) return;
-
-    hasGeneratedToday.current = true;
-    const newRecurrent = generateRecurrentTasks(tasks, user.uid);
-    if (newRecurrent.length > 0) {
-      newRecurrent.forEach(async (t) => {
-        // Identify the original template to update its lastGenerated
-        const template = tasks.find(exist => exist.title === t.title && exist.recurrence?.type === t.recurrence?.type && exist.source === 'manual');
-        if (template) {
-          await updateTask(template.id, { 
-            recurrence: { ...template.recurrence!, lastGenerated: new Date().toISOString().split('T')[0] } 
-          });
-          await addTask(t);
-        }
-      });
-    }
-  }, [user, tasks.length]);
-
-  useEffect(() => {
     if (!user) return;
 
     // Listen to current user document for real-time XP updates
@@ -312,19 +299,6 @@ export default function App() {
       setBackupTypes(data);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'backup_types'));
 
-    // Listen to Tasks
-    const qTasks = query(collection(db, 'tasks'), where('userId', '==', user.uid));
-    const unsubscribeTasks = onSnapshot(qTasks, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-      
-      // Radical simplification of client-side sorting using ISO 8601 strings
-      data.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-      
-      setTasks(data);
-    }, (error) => {
-      console.error("Firestore Tasks Listener Error:", error);
-    });
-
     // Listen to Users (For Leaderboard and Admin)
     const qUsers = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
@@ -339,7 +313,6 @@ export default function App() {
       unsubscribeClients();
       unsubscribeDestinations();
       unsubscribeBackupTypes();
-      unsubscribeTasks();
       unsubscribeUsers();
     };
   }, [user?.uid]);
@@ -531,137 +504,6 @@ export default function App() {
     } catch (error) {
       toast.error('Erro ao remover categoria.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `backup_types/${id}`);
-    }
-  };
-
-  const addTask = async (taskData: Partial<Task>) => {
-    if (!user) return;
-    const isQuiet = taskData.source === 'incident' || taskData.source === 'recurrent';
-    const toastId = !isQuiet ? toast.loading('Criando tarefa...') : undefined;
-    try {
-      const finalTask = {
-        title: taskData.title || 'Nova Tarefa',
-        description: taskData.description || '',
-        completed: false,
-        status: taskData.status || 'inbox',
-        type: taskData.type || 'rotina',
-        priority: taskData.priority || 'medium',
-        source: taskData.source || 'manual',
-        owner: taskData.owner || user.displayName || 'Técnico',
-        userId: user.uid,
-        createdAt: new Date().toISOString(),
-        dueDate: taskData.dueDate || '',
-        tags: taskData.tags || [],
-        duration: taskData.duration || 0,
-        relatedBackupId: taskData.relatedBackupId || '',
-        relatedClient: taskData.relatedClient || '',
-        relatedRecordTitle: taskData.relatedRecordTitle || '',
-        recurrence: taskData.recurrence || { type: 'none' },
-        checklist: taskData.checklist || [],
-        notes: taskData.notes || '',
-      };
-      await addDoc(collection(db, 'tasks'), finalTask);
-      if (toastId) toast.success('Tarefa criada com sucesso!', { id: toastId });
-    } catch (error) {
-      if (toastId) toast.error('Erro ao criar tarefa.', { id: toastId });
-      handleFirestoreError(error, OperationType.CREATE, 'tasks');
-    }
-  };
-
-  const updateTask = async (id: string, updates: Partial<Task>) => {
-    try {
-      const task = tasks.find(t => t.id === id);
-      if (!task) return;
-
-      const { id: _, ...cleanUpdates } = updates;
-
-      // Ensure status and completed stay in sync
-      if (cleanUpdates.status === 'done') {
-        cleanUpdates.completed = true;
-      } else if (cleanUpdates.status !== undefined) {
-        cleanUpdates.completed = false;
-      } else if (cleanUpdates.completed === true) {
-        cleanUpdates.status = 'done';
-      } else if (cleanUpdates.completed === false) {
-        if (task.status === 'done') {
-          cleanUpdates.status = 'inbox';
-        }
-      }
-
-      const isFinishing = (cleanUpdates.completed === true && !task.completed) || 
-                          (cleanUpdates.status === 'done' && task.status !== 'done');
-
-      let loadingText = 'Salvando alterações...';
-      let successText = 'Tarefa atualizada!';
-      if (isFinishing) {
-        loadingText = 'Concluindo tarefa...';
-        successText = 'Tarefa concluída! Parabéns!';
-      } else if (cleanUpdates.isGolden !== undefined) {
-        loadingText = cleanUpdates.isGolden ? 'Destacando Golden Task...' : 'Removendo destaque...';
-        successText = cleanUpdates.isGolden ? 'Tarefa de Ouro ativada! 👑' : 'Tarefa normalizada!';
-      }
-
-      const toastId = toast.loading(loadingText);
-
-      await updateDoc(doc(db, 'tasks', id), { ...cleanUpdates, updatedAt: new Date().toISOString() });
-      toast.success(successText, { id: toastId });
-
-      if (isFinishing && user) {
-        let xpAwarded = 10;
-        let reason = `Concluiu a tarefa: ${task.title}`;
-
-        const isGolden = cleanUpdates.isGolden !== undefined ? cleanUpdates.isGolden : task.isGolden;
-        const important = cleanUpdates.important !== undefined ? cleanUpdates.important : task.important;
-        const duration = cleanUpdates.duration !== undefined ? cleanUpdates.duration : task.duration;
-
-        if (isGolden) {
-          xpAwarded = 50;
-          reason = `Concluiu a Tarefa de Ouro: ${task.title}`;
-        } else if (important) {
-          xpAwarded = 25;
-          reason = `Concluiu a tarefa importante: ${task.title}`;
-        }
-
-        if (duration && duration > 60) {
-          xpAwarded += 15;
-          reason += ' (Bônus de foco/duração)';
-        }
-
-        await awardXP(user.uid, xpAwarded, reason);
-        toast.success(`+${xpAwarded} XP conquistados!`);
-      }
-    } catch (error) {
-      toast.error('Erro ao atualizar tarefa.');
-      handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
-    }
-  };
-
-  const toggleTask = async (id: string, completed: boolean) => {
-    await updateTask(id, { 
-      completed,
-      status: completed ? 'done' : 'doing'
-    });
-  };
-
-  const toggleImportant = async (id: string, important: boolean) => {
-    const toastId = toast.loading(important ? 'Adicionando estrela...' : 'Removendo estrela...');
-    try {
-      await updateDoc(doc(db, 'tasks', id), { important });
-      toast.success(important ? 'Tarefa marcada como importante!' : 'Tarefa normalizada!', { id: toastId });
-    } catch (error) {
-      toast.error('Erro ao atualizar prioridade.', { id: toastId });
-      handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
-    }
-  };
-
-  const deleteTask = async (id: string) => {
-    const toastId = toast.loading('Excluindo tarefa...');
-    try {
-      await deleteDoc(doc(db, 'tasks', id));
-      toast.success('Tarefa excluída!', { id: toastId });
-    } catch (error) {
-      toast.error('Erro ao excluir tarefa.', { id: toastId });
-      handleFirestoreError(error, OperationType.DELETE, `tasks/${id}`);
     }
   };
 

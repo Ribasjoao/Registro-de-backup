@@ -50,5 +50,5 @@
   <circle cx="256" cy="380" r="8" fill="#8b5cf6" opacity="0.9" />
 
   <!-- Subtle Brand Name Baseplate -->
-  <text x="256" y="445" font-family="'Space Grotesk', 'Plus Jakarta Sans', sans-serif" font-size="32" font-weight="700" fill="#f8fafc" letter-spacing="6" text-anchor="middle">GATE7</text>
+  <text x="256" y="445" font-family="'Space Grotesk', 'Plus Jakarta Sans', sans-serif" font-size="30" font-weight="700" fill="#f8fafc" letter-spacing="6" text-anchor="middle">BACKUP</text>
 </svg>
