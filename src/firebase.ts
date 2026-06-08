@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, getIdTokenResult } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, where, addDoc, updateDoc, deleteDoc, getDocFromServer, limit, getDocs, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Import the fallback Firebase configuration
@@ -22,6 +22,24 @@ const firebaseConfig = {
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Enable Firestore multi-tab offline persistence
+enableMultiTabIndexedDbPersistence(db)
+  .then(() => {
+    console.log('Firestore multi-tab offline persistence enabled successfully.');
+  })
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time.
+      console.warn('Firestore offline persistence warning: Multiple tabs open. Active in another tab.');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support all of the features required to enable persistence
+      console.warn('Firestore offline persistence warning: Browser does not support indexedDB offline persistence.');
+    } else {
+      console.error('Firestore offline persistence failed to initialize:', err);
+    }
+  });
+
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
 export const googleProvider = new GoogleAuthProvider();

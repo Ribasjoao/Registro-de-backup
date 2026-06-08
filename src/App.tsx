@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Toaster, toast } from 'react-hot-toast';
 import { awardXP } from './lib/xpService';
 import { motion } from 'motion/react';
 import { 
@@ -345,39 +346,50 @@ export default function App() {
 
   const addClient = async (name: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Adicionando cliente...');
     try {
       await addDoc(collection(db, 'clients'), {
         name,
         createdAt: new Date().toISOString(),
       });
+      toast.success('Cliente adicionado com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao adicionar cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'clients');
     }
   };
 
   const updateClient = async (updatedClient: Client) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Atualizando cliente...');
     try {
       const { id, ...data } = updatedClient;
       await updateDoc(doc(db, 'clients', id), data);
+      toast.success('Cliente atualizado com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `clients/${updatedClient.id}`);
     }
   };
 
   const deleteClient = async (id: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Removendo cliente...');
     try {
       await deleteDoc(doc(db, 'clients', id));
+      toast.success('Cliente removido com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao remover cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `clients/${id}`);
     }
   };
 
   const addBackup = async (backup: Omit<BackupRecord, 'id'>) => {
     if (!effectiveIsEditor) return;
+    const toastId = toast.loading('Registrando backup...');
     try {
       const docRef = await addDoc(collection(db, 'backups'), backup);
+      toast.success('Backup registrado com sucesso!', { id: toastId });
       
       // Auto-task for failed backups
       if (backup.status === 'failed') {
@@ -394,105 +406,138 @@ export default function App() {
         });
       }
     } catch (error) {
+      toast.error('Erro ao registrar backup.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'backups');
     }
   };
 
   const updateBackup = async (updatedBackup: BackupRecord) => {
     if (!effectiveIsEditor) return;
+    const toastId = toast.loading('Atualizando registro...');
     try {
       const { id, ...data } = updatedBackup;
       await updateDoc(doc(db, 'backups', id), data);
+      toast.success('Backup atualizado com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar backup.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `backups/${updatedBackup.id}`);
     }
   };
 
   const deleteBackup = async (id: string) => {
     if (!effectiveIsEditor) return;
+    const toastId = toast.loading('Excluindo registro...');
     try {
       await deleteDoc(doc(db, 'backups', id));
+      toast.success('Backup excluído com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao excluir backup.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `backups/${id}`);
     }
   };
 
   const updateDestination = async (updatedDest: StorageDestination) => {
     if (!effectiveIsEditor) return;
+    const toastId = toast.loading('Salvando destino...');
     try {
       const { id, ...data } = updatedDest;
       await updateDoc(doc(db, 'destinations', id), data);
+      toast.success('Destino atualizado com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar destino.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `destinations/${updatedDest.id}`);
     }
   };
 
   const addDestination = async (destination: Omit<StorageDestination, 'id'>) => {
     if (!effectiveIsEditor) return;
+    const toastId = toast.loading('Adicionando destino...');
     try {
       await addDoc(collection(db, 'destinations'), destination);
+      toast.success('Destino adicionado com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao adicionar destino.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'destinations');
     }
   };
 
   const deleteDestination = async (id: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Removendo destino...');
     try {
       await deleteDoc(doc(db, 'destinations', id));
+      toast.success('Destino removido com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao remover destino.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `destinations/${id}`);
     }
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Atualizando permissão...');
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
+      toast.success('Perfil de usuário atualizado!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar perfil.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     }
   };
 
   const deleteUser = async (userId: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Excluindo usuário...');
     try {
       await deleteDoc(doc(db, 'users', userId));
+      toast.success('Usuário excluído com sucesso!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao excluir usuário.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
     }
   };
 
   const addBackupType = async (name: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Salvando categoria...');
     try {
       await addDoc(collection(db, 'backup_types'), { name });
+      toast.success('Categoria adicionada!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao criar categoria.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'backup_types');
     }
   };
 
   const updateBackupType = async (updatedType: BackupType) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Salvando categoria...');
     try {
       const { id, ...data } = updatedType;
       await updateDoc(doc(db, 'backup_types', id), data);
+      toast.success('Categoria atualizada!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar categoria.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `backup_types/${updatedType.id}`);
     }
   };
 
   const deleteBackupType = async (id: string) => {
     if (!effectiveIsAdmin) return;
+    const toastId = toast.loading('Excluindo categoria...');
     try {
       await deleteDoc(doc(db, 'backup_types', id));
+      toast.success('Categoria removida!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao remover categoria.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `backup_types/${id}`);
     }
   };
 
   const addTask = async (taskData: Partial<Task>) => {
     if (!user) return;
+    const isQuiet = taskData.source === 'incident' || taskData.source === 'recurrent';
+    const toastId = !isQuiet ? toast.loading('Criando tarefa...') : undefined;
     try {
       const finalTask = {
         title: taskData.title || 'Nova Tarefa',
@@ -516,7 +561,9 @@ export default function App() {
         notes: taskData.notes || '',
       };
       await addDoc(collection(db, 'tasks'), finalTask);
+      if (toastId) toast.success('Tarefa criada com sucesso!', { id: toastId });
     } catch (error) {
+      if (toastId) toast.error('Erro ao criar tarefa.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'tasks');
     }
   };
@@ -544,7 +591,20 @@ export default function App() {
       const isFinishing = (cleanUpdates.completed === true && !task.completed) || 
                           (cleanUpdates.status === 'done' && task.status !== 'done');
 
+      let loadingText = 'Salvando alterações...';
+      let successText = 'Tarefa atualizada!';
+      if (isFinishing) {
+        loadingText = 'Concluindo tarefa...';
+        successText = 'Tarefa concluída! Parabéns!';
+      } else if (cleanUpdates.isGolden !== undefined) {
+        loadingText = cleanUpdates.isGolden ? 'Destacando Golden Task...' : 'Removendo destaque...';
+        successText = cleanUpdates.isGolden ? 'Tarefa de Ouro ativada! 👑' : 'Tarefa normalizada!';
+      }
+
+      const toastId = toast.loading(loadingText);
+
       await updateDoc(doc(db, 'tasks', id), { ...cleanUpdates, updatedAt: new Date().toISOString() });
+      toast.success(successText, { id: toastId });
 
       if (isFinishing && user) {
         let xpAwarded = 10;
@@ -568,8 +628,10 @@ export default function App() {
         }
 
         await awardXP(user.uid, xpAwarded, reason);
+        toast.success(`+${xpAwarded} XP conquistados!`);
       }
     } catch (error) {
+      toast.error('Erro ao atualizar tarefa.');
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
   };
@@ -582,17 +644,23 @@ export default function App() {
   };
 
   const toggleImportant = async (id: string, important: boolean) => {
+    const toastId = toast.loading(important ? 'Adicionando estrela...' : 'Removendo estrela...');
     try {
       await updateDoc(doc(db, 'tasks', id), { important });
+      toast.success(important ? 'Tarefa marcada como importante!' : 'Tarefa normalizada!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao atualizar prioridade.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${id}`);
     }
   };
 
   const deleteTask = async (id: string) => {
+    const toastId = toast.loading('Excluindo tarefa...');
     try {
       await deleteDoc(doc(db, 'tasks', id));
+      toast.success('Tarefa excluída!', { id: toastId });
     } catch (error) {
+      toast.error('Erro ao excluir tarefa.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `tasks/${id}`);
     }
   };
@@ -607,17 +675,17 @@ export default function App() {
     }
   ) => {
     if (!user) return;
+    const toastId = toast.loading(resetType === 'personal' ? 'Redefinindo dados pessoais...' : 'Limpando dados do sistema...');
     try {
       if (resetType === 'personal') {
-        // 1. Apagar tarefas pessoais do usuário
         const qTasks = query(collection(db, 'tasks'), where('userId', '==', user.uid));
         const tasksSnapshot = await getDocs(qTasks);
         const taskDeletePromises = tasksSnapshot.docs.map(docRef => deleteDoc(doc(db, 'tasks', docRef.id)));
         await Promise.all(taskDeletePromises);
+        toast.success('Dados pessoais redefinidos com sucesso!', { id: toastId });
       } else if (resetType === 'system' && effectiveIsAdmin && systemOptions) {
         const { deleteBackups, deleteClients, deleteDestinations, clientNameFilter } = systemOptions;
 
-        // 1. Apagar backups registrados (com ou sem filtro por cliente)
         if (deleteBackups) {
           let backupsSnapshot;
           if (clientNameFilter && clientNameFilter !== 'all') {
@@ -630,21 +698,21 @@ export default function App() {
           await Promise.all(backupDeletePromises);
         }
 
-        // 2. Apagar todos os clientes se configurado
         if (deleteClients) {
           const clientsSnapshot = await getDocs(collection(db, 'clients'));
           const clientDeletePromises = clientsSnapshot.docs.map(docRef => deleteDoc(doc(db, 'clients', docRef.id)));
           await Promise.all(clientDeletePromises);
         }
 
-        // 3. Apagar todas as destinos de armazenamento configurados se selecionado
         if (deleteDestinations) {
           const destinationsSnapshot = await getDocs(collection(db, 'destinations'));
           const destDeletePromises = destinationsSnapshot.docs.map(docRef => deleteDoc(doc(db, 'destinations', docRef.id)));
           await Promise.all(destDeletePromises);
         }
+        toast.success('Dados do sistema redefinidos com sucesso!', { id: toastId });
       }
     } catch (error) {
+      toast.error('Erro ao redefinir dados.', { id: toastId });
       console.error('Error resetting data:', error);
       handleFirestoreError(error, OperationType.DELETE, `reset/${resetType}`);
     }
@@ -922,6 +990,33 @@ export default function App() {
           defaultResponsible={user.displayName || user.email || undefined}
         />
       )}
+      <Toaster 
+        position="bottom-right" 
+        toastOptions={{
+          style: {
+            background: 'var(--color-bg-card)',
+            color: 'var(--color-text-main)',
+            border: '1px solid var(--color-border-main)',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            padding: '12px 16px',
+          },
+          success: {
+            iconTheme: {
+              primary: 'var(--color-success)',
+              secondary: 'var(--color-bg-card)',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: 'var(--color-danger)',
+              secondary: 'var(--color-bg-card)',
+            },
+          },
+        }}
+      />
     </div>
   );
 }

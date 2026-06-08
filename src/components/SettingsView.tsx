@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { Client, StorageDestination, BackupType } from '../types';
 import { EditDestinationModal } from './EditDestinationModal';
@@ -88,10 +89,10 @@ export function SettingsView({
     try {
       await onResetData('personal');
       setShowPersonalConfirm(false);
-      alert('Seus dados pessoais (Tarefas e Gamificação) foram resetados de volta ao zero com sucesso!');
+      toast.success('Seus dados pessoais (Tarefas e Gamificação) foram redefinidos!');
     } catch (e) {
       console.error(e);
-      alert('Erro ao realizar o reset dos dados pessoais.');
+      toast.error('Erro ao realizar o reset dos dados pessoais.');
     } finally {
       setIsResettingPersonal(false);
     }
@@ -100,7 +101,7 @@ export function SettingsView({
   const handleResetSystem = async () => {
     if (!onResetData) return;
     if (!deleteBackups && !deleteClients && !deleteDestinations) {
-      alert('Selecione pelo menos uma das opções acima para limpar do banco de dados.');
+      toast.error('Selecione pelo menos uma das opções acima para limpar do banco de dados.');
       return;
     }
     setIsResettingSystem(true);
@@ -112,10 +113,10 @@ export function SettingsView({
         clientNameFilter: selectedClientFilter
       });
       setShowSystemConfirm(false);
-      alert('Os dados selecionados do sistema foram limpos com sucesso!');
+      toast.success('Os dados selecionados do sistema foram limpos com sucesso!');
     } catch (e) {
       console.error(e);
-      alert('Erro ao realizar o reset dos dados selecionados do sistema.');
+      toast.error('Erro ao realizar o reset dos dados selecionados do sistema.');
     } finally {
       setIsResettingSystem(false);
     }
@@ -700,7 +701,7 @@ export function SettingsView({
                         <button
                           onClick={() => {
                             if (!deleteBackups && !deleteClients && !deleteDestinations) {
-                              alert('Selecione pelo menos uma das opções acima para redefinir!');
+                              toast.error('Selecione pelo menos uma das opções acima para redefinir!');
                               return;
                             }
                             setShowSystemConfirm(true);
