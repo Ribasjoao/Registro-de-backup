@@ -140,6 +140,20 @@
         "isGolden": { "type": "boolean" }
       },
       "required": ["title", "completed", "createdAt", "userId", "status", "type", "priority", "owner"]
+    },
+    "audit_log": {
+      "title": "Audit Log",
+      "description": "An audit log trace recording actions within the system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["userId", "userName", "action", "details", "timestamp"]
     }
   },
   "firestore": {
@@ -170,6 +184,10 @@
     "/tasks/{taskId}": {
       "schema": "task",
       "description": "Collection of tasks for the to-do list."
+    },
+    "/audit_logs/{logId}": {
+      "schema": "audit_log",
+      "description": "Collection of audit trail events."
     }
   }
 }

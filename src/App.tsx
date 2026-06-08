@@ -66,6 +66,7 @@ import {
 } from './firebase';
 import { useTasks } from './hooks/useTasks';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
+import { logAction } from './services/auditService';
 
 type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings';
 
@@ -326,6 +327,14 @@ export default function App() {
         createdAt: new Date().toISOString(),
       });
       toast.success('Cliente adicionado com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'CREATE_CLIENT',
+          `Adicionou o cliente "${name}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao adicionar cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'clients');
@@ -339,6 +348,14 @@ export default function App() {
       const { id, ...data } = updatedClient;
       await updateDoc(doc(db, 'clients', id), data);
       toast.success('Cliente atualizado com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'UPDATE_CLIENT',
+          `Atualizou as informações do cliente "${updatedClient.name}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao atualizar cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `clients/${updatedClient.id}`);
@@ -347,10 +364,20 @@ export default function App() {
 
   const deleteClient = async (id: string) => {
     if (!effectiveIsAdmin) return;
+    const client = clients.find(c => c.id === id);
+    const clientName = client ? client.name : id;
     const toastId = toast.loading('Removendo cliente...');
     try {
       await deleteDoc(doc(db, 'clients', id));
       toast.success('Cliente removido com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'DELETE_CLIENT',
+          `Excluiu o cliente "${clientName}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao remover cliente.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `clients/${id}`);
@@ -364,6 +391,15 @@ export default function App() {
       const docRef = await addDoc(collection(db, 'backups'), backup);
       toast.success('Backup registrado com sucesso!', { id: toastId });
       
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          'CREATE_BACKUP',
+          `Registrou backup "${backup.title}" para o cliente "${backup.client}" (${backup.status.toUpperCase()})`
+        );
+      }
+
       // Auto-task for failed backups
       if (backup.status === 'failed') {
         await addTask({
@@ -391,6 +427,14 @@ export default function App() {
       const { id, ...data } = updatedBackup;
       await updateDoc(doc(db, 'backups', id), data);
       toast.success('Backup atualizado com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          'UPDATE_BACKUP',
+          `Atualizou o registro de backup "${updatedBackup.title}" do cliente "${updatedBackup.client}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao atualizar backup.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `backups/${updatedBackup.id}`);
@@ -399,10 +443,20 @@ export default function App() {
 
   const deleteBackup = async (id: string) => {
     if (!effectiveIsEditor) return;
+    const backup = backups.find(b => b.id === id);
+    const backupTitle = backup ? backup.title : id;
     const toastId = toast.loading('Excluindo registro...');
     try {
       await deleteDoc(doc(db, 'backups', id));
       toast.success('Backup excluído com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          'DELETE_BACKUP',
+          `Excluiu o registro de backup "${backupTitle}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao excluir backup.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `backups/${id}`);
@@ -416,6 +470,14 @@ export default function App() {
       const { id, ...data } = updatedDest;
       await updateDoc(doc(db, 'destinations', id), data);
       toast.success('Destino atualizado com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          'UPDATE_DESTINATION',
+          `Atualizou o destino de armazenamento "${updatedDest.name}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao atualizar destino.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `destinations/${updatedDest.id}`);
@@ -428,6 +490,14 @@ export default function App() {
     try {
       await addDoc(collection(db, 'destinations'), destination);
       toast.success('Destino adicionado com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          'CREATE_DESTINATION',
+          `Adicionou o destino de armazenamento "${destination.name}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao adicionar destino.', { id: toastId });
       handleFirestoreError(error, OperationType.CREATE, 'destinations');
@@ -436,10 +506,20 @@ export default function App() {
 
   const deleteDestination = async (id: string) => {
     if (!effectiveIsAdmin) return;
+    const dest = destinations.find(d => d.id === id);
+    const destName = dest ? dest.name : id;
     const toastId = toast.loading('Removendo destino...');
     try {
       await deleteDoc(doc(db, 'destinations', id));
       toast.success('Destino removido com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'DELETE_DESTINATION',
+          `Excluiu o destino de armazenamento "${destName}"`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao remover destino.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `destinations/${id}`);
@@ -452,6 +532,14 @@ export default function App() {
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
       toast.success('Perfil de usuário atualizado!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'UPDATE_USER_ROLE',
+          `Alterou a permissão do usuário ID ${userId} para ${newRole.toUpperCase()}`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao atualizar perfil.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
@@ -464,6 +552,14 @@ export default function App() {
     try {
       await deleteDoc(doc(db, 'users', userId));
       toast.success('Usuário excluído com sucesso!', { id: toastId });
+      if (user) {
+        await logAction(
+          user.uid,
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          'DELETE_USER',
+          `Excluiu o cadastro do usuário ID ${userId}`
+        );
+      }
     } catch (error) {
       toast.error('Erro ao excluir usuário.', { id: toastId });
       handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);

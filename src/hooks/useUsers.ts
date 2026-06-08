@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, firebaseConfig, handleFirestoreError, OperationType } from '../firebase';
+import { auth, db, firebaseConfig, handleFirestoreError, OperationType } from '../firebase';
 import { AppUser } from '../types';
 import { toast } from 'react-hot-toast';
+import { logAction } from '../services/auditService';
 
 interface CreateUserData {
   name: string;
@@ -52,6 +53,17 @@ export function useUsers() {
       };
 
       await setDoc(userDocRef, userProfile);
+
+      // Audit Log creation
+      const currentAdmin = auth.currentUser;
+      if (currentAdmin) {
+        await logAction(
+          currentAdmin.uid,
+          currentAdmin.displayName || currentAdmin.email || 'Admin',
+          'CREATE_USER',
+          `Criou o usuário: "${name}" (${email}) com o perfil ${role.toUpperCase()}`
+        );
+      }
 
       toast.success('Usuário criado com sucesso!', { id: toastId });
       return { id: newUid, ...userProfile } as AppUser;

@@ -120,3 +120,13 @@ export interface StorageDestination {
   backupsCount: number;
   location: 'Local' | 'S3' | 'Cloud';
 }
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  timestamp: string;
+}
+

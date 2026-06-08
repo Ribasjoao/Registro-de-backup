@@ -154,6 +154,15 @@ service cloud.firestore {
              (!('checklist' in data) || data.checklist == null || data.checklist is list);
     }
 
+    function isValidAuditLog(data) {
+      return hasOnlyAllowedFields(['userId', 'userName', 'action', 'details', 'timestamp']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 150 &&
+             data.action is string && data.action.size() > 0 && data.action.size() < 100 &&
+             data.details is string && data.details.size() > 0 && data.details.size() < 2000 &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -212,6 +221,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidTask(request.resource.data);
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
+      allow delete, update: if isAdmin();
     }
   }
 }

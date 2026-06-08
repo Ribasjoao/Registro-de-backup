@@ -1,14 +1,47 @@
-import React, { useState } from 'react';
-import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle, UserPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle, UserPlus, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../lib/utils';
-import { Client, StorageDestination, BackupType } from '../types';
+import { Client, StorageDestination, BackupType, AuditLog } from '../types';
 import { EditDestinationModal } from './EditDestinationModal';
 import { EditClientModal } from './EditClientModal';
 import { AddDestinationModal } from './AddDestinationModal';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 import { useUsers } from '../hooks/useUsers';
 import { motion, AnimatePresence } from 'motion/react';
+import { db, collection, query, orderBy, onSnapshot, limit } from '../firebase';
+
+function formatRelativeTime(timestampStr: string): string {
+  try {
+    const date = new Date(timestampStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'Agora';
+    
+    const diffSecs = Math.floor(diffMs / 1000);
+    if (diffSecs < 60) return `Há ${diffSecs}s`;
+    
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `Há ${diffMins} min`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `Há ${diffDays} dias`;
+    
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (e) {
+    return timestampStr;
+  }
+}
 
 interface SettingsViewProps {
   clients: Client[];
@@ -63,7 +96,7 @@ const usersItemVariants = {
   }
 };
 
-type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'users' | 'reset';
+type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'users' | 'audit' | 'reset';
 
 export function SettingsView({ 
   clients, 
@@ -88,6 +121,32 @@ export function SettingsView({
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [newClientName, setNewClientName] = useState('');
   const [newBackupTypeName, setNewBackupTypeName] = useState('');
+  
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'audit' && isAdmin) {
+      setLoadingLogs(true);
+      const q = query(
+        collection(db, 'audit_logs'),
+        orderBy('timestamp', 'desc'),
+        limit(150)
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const logs: AuditLog[] = [];
+        snapshot.forEach((doc) => {
+          logs.push({ id: doc.id, ...doc.data() } as AuditLog);
+        });
+        setAuditLogs(logs);
+        setLoadingLogs(false);
+      }, (error) => {
+        console.error("Error listening to audit logs:", error);
+        setLoadingLogs(false);
+      });
+      return () => unsubscribe();
+    }
+  }, [activeTab, isAdmin]);
   
   // Custom states/hooks for User Management (Equipe)
   const { createUser, loading: isCreatingUser } = useUsers();
@@ -1136,6 +1195,100 @@ export function SettingsView({
             </motion.div>
           </motion.div>
         );
+      case 'audit':
+        if (!isAdmin) return null;
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 animate-fadeIn"
+          >
+            <div>
+              <h2 className="font-heading text-xl text-text-main font-bold">Logs de Auditoria (Audit Trail)</h2>
+              <p className="text-sm text-text-secondary mt-1">Rastriabilidade completa de todas as ações de criação, edição e exclusão realizadas pela equipe.</p>
+            </div>
+
+            {loadingLogs ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <Clock className="w-8 h-8 text-brand animate-spin" />
+                <span className="text-sm text-text-secondary font-medium">Buscando histórico de auditoria...</span>
+              </div>
+            ) : auditLogs.length > 0 ? (
+              <div className="relative pl-6 border-l border-border-main space-y-8 py-2">
+                <AnimatePresence>
+                  {auditLogs.map((log, index) => {
+                    const initials = log.userName
+                      ? log.userName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                      : 'U';
+                    
+                    let iconColor = "text-blue-500 bg-blue-500/10 border-blue-500/20";
+                    let Icon = Edit2;
+
+                    if (log.action.startsWith('CREATE')) {
+                      iconColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+                      Icon = Plus;
+                    } else if (log.action.startsWith('DELETE')) {
+                      iconColor = "text-rose-500 bg-rose-500/10 border-rose-500/20";
+                      Icon = Trash2;
+                    } else if (log.action.startsWith('COMPLETE')) {
+                      iconColor = "text-teal-400 bg-teal-400/10 border-teal-400/20";
+                      Icon = CheckCircle2;
+                    }
+
+                    return (
+                      <motion.div
+                        key={log.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.02, duration: 0.35 }}
+                        className="relative group flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border border-border-main/50 rounded-xl bg-bg-card/30 backdrop-blur-sm hover:border-brand/30 transition-all shadow-sm"
+                      >
+                        {/* Circle bullet on timeline line */}
+                        <div className="absolute -left-[31px] top-[22px] w-4 h-4 rounded-full bg-bg-main border-2 border-border-main group-hover:border-brand transition-colors flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand/50 group-hover:bg-brand" />
+                        </div>
+
+                        <div className="flex items-start gap-4">
+                          {/* Left Avatar initials */}
+                          <div className="w-9 h-9 rounded-full bg-brand/10 border border-brand/20 text-brand flex items-center justify-center font-bold text-xs shrink-0 select-none shadow-inner">
+                            {initials}
+                          </div>
+
+                          {/* Details & description */}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-bold text-text-main">{log.userName}</span>
+                              <span className="text-xs text-text-secondary font-medium font-mono bg-bg-main px-2 py-0.5 rounded border border-border-main/60 uppercase">
+                                {log.action.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-text-main">{log.details}</p>
+                          </div>
+                        </div>
+
+                        {/* Right Action icon and Timestamp */}
+                        <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                          <span className="text-xs text-text-secondary font-medium">
+                            {formatRelativeTime(log.timestamp)}
+                          </span>
+                          <div className={cn("w-7 h-7 rounded-lg border flex items-center justify-center shrink-0", iconColor)}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="border border-border-main border-dashed rounded-2xl p-12 text-center bg-bg-card/20">
+                <Clock className="w-8 h-8 text-text-secondary mx-auto mb-3" />
+                <h3 className="font-bold text-text-main mb-1">Nenhum evento registrado</h3>
+                <p className="text-sm text-text-secondary">Os eventos e ações de auditoria aparecerão aqui à medida que as modificações forem realizadas.</p>
+              </div>
+            )}
+          </motion.div>
+        );
     }
   };
 
@@ -1202,18 +1355,34 @@ export function SettingsView({
           <Bell className={cn("w-5 h-5", activeTab === 'notifications' ? "text-brand" : "text-text-secondary")} />
           <span className="text-sm">Alertas e Notificações</span>
         </button>
-        <button 
-          onClick={() => setActiveTab('users')}
-          className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 text-left border-l-4 rounded transition-colors",
-            activeTab === 'users' 
-              ? "border-brand bg-brand/5 text-text-main font-bold" 
-              : "border-transparent text-text-main hover:bg-bg-main font-medium"
-          )}
-        >
-          <UserPlus className={cn("w-5 h-5", activeTab === 'users' ? "text-brand" : "text-text-secondary")} />
-          <span className="text-sm">Gerenciar Equipe</span>
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 text-left border-l-4 rounded transition-colors",
+              activeTab === 'users' 
+                ? "border-brand bg-brand/5 text-text-main font-bold" 
+                : "border-transparent text-text-main hover:bg-bg-main font-medium"
+            )}
+          >
+            <UserPlus className={cn("w-5 h-5", activeTab === 'users' ? "text-brand" : "text-text-secondary")} />
+            <span className="text-sm">Gerenciar Equipe</span>
+          </button>
+        )}
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('audit')}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 text-left border-l-4 rounded transition-colors",
+              activeTab === 'audit' 
+                ? "border-brand bg-brand/5 text-text-main font-bold" 
+                : "border-transparent text-text-main hover:bg-bg-main font-medium"
+            )}
+          >
+            <Shield className={cn("w-5 h-5", activeTab === 'audit' ? "text-brand" : "text-text-secondary")} />
+            <span className="text-sm">Auditoria de Logs</span>
+          </button>
+        )}
         <button 
           onClick={() => setActiveTab('reset')}
           className={cn(
@@ -1231,7 +1400,7 @@ export function SettingsView({
       <div className="flex-1 w-full card p-6 md:p-8 min-h-[500px]">
         {renderContent()}
 
-        {activeTab !== 'clients' && activeTab !== 'users' && activeTab !== 'reset' && (
+        {activeTab !== 'clients' && activeTab !== 'users' && activeTab !== 'audit' && activeTab !== 'reset' && (
           <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-border-main">
             <button className="px-4 py-2 text-sm font-semibold text-text-main hover:bg-bg-main rounded-lg transition-colors">
               Cancelar
