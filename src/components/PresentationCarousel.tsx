@@ -27,12 +27,14 @@ type SlideView = 'dashboard' | 'failures';
 export function PresentationCarousel({ backups, onClose }: PresentationCarouselProps) {
   const [currentView, setCurrentView] = useState<SlideView>('dashboard');
 
-  // 1. Filter backups from the last 7 days
+  // 1. Filter backups from the last 7 days with dynamic fallbacks
   const last7DaysBackups = useMemo(() => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const today = new Date();
     
-    return backups.filter(b => {
+    // Check for last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    let filtered = backups.filter(b => {
       try {
         const backupDate = new Date(b.timestamp);
         return backupDate >= sevenDaysAgo;
@@ -40,6 +42,55 @@ export function PresentationCarousel({ backups, onClose }: PresentationCarouselP
         return false;
       }
     });
+
+    if (filtered.length > 0) return filtered;
+
+    // Fallback 1: last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    filtered = backups.filter(b => {
+      try {
+        const backupDate = new Date(b.timestamp);
+        return backupDate >= thirtyDaysAgo;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (filtered.length > 0) return filtered;
+
+    // Fallback 2: all backups
+    return backups;
+  }, [backups]);
+
+  // Contextual date range text based on fallback
+  const dateRangeText = useMemo(() => {
+    if (backups.length === 0) return "Sem Registros de Backup";
+    
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const has7Days = backups.some(b => {
+      try {
+        return new Date(b.timestamp) >= sevenDaysAgo;
+      } catch (e) {
+        return false;
+      }
+    });
+    if (has7Days) return "Últimos 7 Dias";
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const has30Days = backups.some(b => {
+      try {
+        return new Date(b.timestamp) >= thirtyDaysAgo;
+      } catch (e) {
+        return false;
+      }
+    });
+    if (has30Days) return "Últimos 30 Dias";
+
+    return "Histórico Completo";
   }, [backups]);
 
   // 2. KPI Calculations (Last 7 Days)
@@ -112,7 +163,7 @@ export function PresentationCarousel({ backups, onClose }: PresentationCarouselP
           </div>
           <div>
             <h1 className="text-2xl font-heading font-black tracking-tight text-white uppercase">Relatório Executivo</h1>
-            <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Últimos 7 Dias • Registro de Backup</p>
+            <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">{dateRangeText} • Registro de Backup</p>
           </div>
         </div>
 

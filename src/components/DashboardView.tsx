@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download } from 'lucide-react';
 import { BackupRecord } from '../types';
@@ -32,6 +32,7 @@ const itemVariants = {
 
 interface DashboardViewProps {
   backups: BackupRecord[];
+  isPresentationMode?: boolean;
 }
 
 interface TooltipPayloadItem {
@@ -74,7 +75,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
   return null;
 };
 
-export function DashboardView({ backups }: DashboardViewProps) {
+export function DashboardView({ backups, isPresentationMode = false }: DashboardViewProps) {
   const [filterType, setFilterType] = useState<'reuniao' | '7_dias' | '30_dias'>('reuniao');
 
   // Calculates the Friday-closing weekly cycle range
@@ -142,6 +143,26 @@ export function DashboardView({ backups }: DashboardViewProps) {
   const warning = filteredBackups.filter(b => b.status === 'warning').length;
   const failed = filteredBackups.filter(b => b.status === 'failed').length;
   const successRate = total > 0 ? Math.round((success / total) * 100) : 0;
+
+  // Fallback automatically if 'reuniao' filter is empty but we have backups in broader windows
+  useEffect(() => {
+    if (backups.length > 0 && filteredBackups.length === 0 && filterType === 'reuniao') {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const has7DaysData = backups.some(b => {
+        try {
+          return new Date(b.timestamp) >= sevenDaysAgo;
+        } catch (e) {
+          return false;
+        }
+      });
+      if (has7DaysData) {
+        setFilterType('7_dias');
+      } else {
+        setFilterType('30_dias');
+      }
+    }
+  }, [backups, filteredBackups.length, filterType]);
 
   // Pie (Donut) Chart Data
   const pieData = [
@@ -287,7 +308,7 @@ export function DashboardView({ backups }: DashboardViewProps) {
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* 1. FILTER CONTROL HEADER WITH CYCLE RANGE DISPLAY */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card p-5 rounded-3xl border border-border-main shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card p-5 rounded-3xl border border-border-main shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brand/10 border border-brand/15 flex items-center justify-center text-brand">
             <Calendar className="w-5 h-5 animate-pulse" />
@@ -362,7 +383,10 @@ export function DashboardView({ backups }: DashboardViewProps) {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        className={cn(
+          "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 transition-all duration-300",
+          isPresentationMode ? "gap-6 lg:gap-8 mb-4 scale-[1.01]" : "gap-4"
+        )}
       >
         <KPICard 
           title="Taxa de Disponibilidade" 
@@ -371,12 +395,14 @@ export function DashboardView({ backups }: DashboardViewProps) {
           icon={<Shield className={cn("w-5 h-5", successRate >= 95 ? "text-success" : successRate >= 85 ? "text-warning" : "text-danger")} />}
           trend={`${successRate >= 95 ? 'Excelente' : successRate >= 85 ? 'Esperado' : 'Crítico'}`}
           trendUp={successRate >= 90}
+          isPresentationMode={isPresentationMode}
         />
         <KPICard 
           title="Total de Backups" 
           value={total.toString()} 
           subtitle="Rotinas executadas"
           icon={<Database className="w-5 h-5 text-brand" />}
+          isPresentationMode={isPresentationMode}
         />
         <KPICard 
           title="Falhas Críticas" 
@@ -384,12 +410,14 @@ export function DashboardView({ backups }: DashboardViewProps) {
           subtitle="Requerem ação urgente"
           icon={<AlertTriangle className="w-5 h-5 text-danger" />}
           alert={failed > 0}
+          isPresentationMode={isPresentationMode}
         />
         <KPICard 
           title="Alertas / Avisos" 
           value={warning.toString()} 
           subtitle="Verificações manuais necessárias"
           icon={<History className="w-5 h-5 text-warning" />}
+          isPresentationMode={isPresentationMode}
         />
       </motion.div>
 
@@ -620,34 +648,51 @@ interface KPICardProps {
   trend?: string;
   trendUp?: boolean;
   alert?: boolean;
+  isPresentationMode?: boolean;
 }
 
-function KPICard({ title, value, subtitle, icon, trend, trendUp, alert }: KPICardProps) {
+function KPICard({ title, value, subtitle, icon, trend, trendUp, alert, isPresentationMode }: KPICardProps) {
   return (
     <motion.div 
       variants={itemVariants}
-      whileHover={{ scale: 1.03, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
+      whileHover={{ scale: isPresentationMode ? 1.04 : 1.03, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "card p-5 border-l-4 shadow-sm",
-        alert ? "border-l-danger bg-danger/[0.02]" : "border-l-brand"
+        "card transition-all duration-300 border-l-4 shadow-sm",
+        alert ? "border-l-danger bg-danger/[0.02]" : "border-l-brand",
+        isPresentationMode ? "p-6 md:p-8" : "p-5"
       )}
     >
       <div className="flex justify-between items-start mb-3">
-        <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">{title}</span>
-        <div className="p-2 rounded-xl bg-bg-card shadow-sm border border-border-main flex items-center justify-center">
+        <span className={cn(
+          "font-black text-text-secondary uppercase tracking-widest transition-all duration-300",
+          isPresentationMode ? "text-[11px] md:text-xs" : "text-[10px]"
+        )}>{title}</span>
+        <div className={cn(
+          "rounded-xl bg-bg-card shadow-sm border border-border-main flex items-center justify-center transition-all duration-300",
+          isPresentationMode ? "p-3" : "p-2"
+        )}>
           {icon}
         </div>
       </div>
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-2xl font-black font-heading text-text-main leading-none mb-1.5">{value}</div>
-          {subtitle && <div className="text-[10px] text-text-secondary font-bold leading-tight">{subtitle}</div>}
+          <div className={cn(
+            "font-black font-heading text-text-main leading-none transition-all duration-300",
+            isPresentationMode ? "text-3xl md:text-5xl mb-2.5" : "text-2xl mb-1.5"
+          )}>{value}</div>
+          {subtitle && (
+            <div className={cn(
+              "text-text-secondary font-bold leading-tight transition-all duration-300",
+              isPresentationMode ? "text-[11px] md:text-xs" : "text-[10px]"
+            )}>{subtitle}</div>
+          )}
         </div>
         {trend && (
           <div className={cn(
-            "flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider",
-            trendUp ? "text-success bg-success/10 border border-success/15" : "text-danger bg-danger/10 border border-danger/15"
+            "flex items-center gap-1 font-black px-2 py-0.5 rounded-lg uppercase tracking-wider transition-all duration-300",
+            trendUp ? "text-success bg-success/10 border border-success/15" : "text-danger bg-danger/10 border border-danger/15",
+            isPresentationMode ? "text-xs px-2.5 py-1" : "text-[9px]"
           )}>
             {trend}
           </div>

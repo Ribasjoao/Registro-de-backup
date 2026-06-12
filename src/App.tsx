@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -133,6 +133,8 @@ export default function App() {
         });
       }
       setIsPresentationMode(true);
+      // Auto redirect to dashboard in presentation mode
+      navigate('/dashboard');
       // Presentation mode looks better in dark mode
       if (!isDarkMode) setIsDarkMode(true);
     } else {
@@ -722,154 +724,179 @@ export default function App() {
       "flex h-screen overflow-hidden premium-bg-layout transition-colors duration-300",
       isPresentationMode && "presentation-mode"
     )}>
+
       {isPresentationMode && (
-        <PresentationCarousel 
-          backups={backups} 
-          onClose={togglePresentationMode} 
-        />
+        <PresentationCarousel backups={backups} onClose={togglePresentationMode} />
       )}
 
-      {/* Sidebar */}
-      {!isPresentationMode && (
-        <aside className="w-[240px] sidebar flex-shrink-0 flex flex-col h-full hidden md:flex">
-          <div className="h-20 flex items-center px-6 border-b border-border-main">
-            <div className="flex items-center gap-3">
-              <DotMatrixLoader pattern="dynamic" color="petal-shimmer" size="logo" />
-              <span className="font-heading font-bold text-lg tracking-tight text-text-main">Dashboard</span>
-            </div>
-          </div>
-          
-          <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
-              return (
-                <motion.button
-                  key={item.id}
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                  onClick={() => navigate(item.path)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4 cursor-pointer",
-                    isActive 
-                      ? "bg-brand/10 text-brand border-brand font-semibold" 
-                      : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
-                  )}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-sm">{item.label}</span>
-                </motion.button>
-              );
-            })}
-          </nav>
-
-          <div className="p-4 border-t border-border-main">
-            <div className="flex items-center justify-between mb-4">
+      {/* Sidebar with layout animation */}
+      <AnimatePresence mode="wait">
+        {!isPresentationMode && (
+          <motion.aside 
+            initial={{ width: 0, opacity: 0, x: -240 }}
+            animate={{ width: 240, opacity: 1, x: 0 }}
+            exit={{ width: 0, opacity: 0, x: -240 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+            className="w-[240px] sidebar flex-shrink-0 flex flex-col h-full hidden md:flex overflow-hidden"
+          >
+            <div className="h-20 flex items-center px-6 border-b border-border-main shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-white overflow-hidden select-none">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" />
-                  ) : (
-                    (user.displayName 
-                      ? user.displayName.trim().split(/\s+/).map(n => n[0]).join('').substring(0, 2)
-                      : user.email?.substring(0, 2) || 'OP'
-                    ).toUpperCase()
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
-                  <span className="text-xs text-brand truncate flex items-center gap-1 uppercase tracking-wider font-semibold">
-                    {displayRole === 'admin' ? 'Administrador' : displayRole === 'editor' ? 'Editor' : 'Visualizador'}
-                  </span>
-                </div>
+                <DotMatrixLoader pattern="dynamic" color="petal-shimmer" size="logo" />
+                <span className="font-heading font-bold text-lg tracking-tight text-text-main">Dashboard</span>
               </div>
             </div>
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:bg-bg-main hover:text-text-main transition-all text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </button>
-          </div>
-        </aside>
-      )}
+            
+            <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
+                return (
+                  <motion.button
+                    key={item.id}
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    onClick={() => navigate(item.path)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4 cursor-pointer",
+                      isActive 
+                        ? "bg-brand/10 text-brand border-brand font-semibold" 
+                        : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-sm">{item.label}</span>
+                  </motion.button>
+                );
+              })}
+            </nav>
+
+            <div className="p-4 border-t border-border-main shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-white overflow-hidden select-none">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" />
+                    ) : (
+                      (user.displayName 
+                        ? user.displayName.trim().split(/\s+/).map(n => n[0]).join('').substring(0, 2)
+                        : user.email?.substring(0, 2) || 'OP'
+                      ).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
+                    <span className="text-xs text-brand truncate flex items-center gap-1 uppercase tracking-wider font-semibold">
+                      {displayRole === 'admin' ? 'Administrador' : displayRole === 'editor' ? 'Editor' : 'Visualizador'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:bg-bg-main hover:text-text-main transition-all text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Exit Presentation Mode Button (Floating) */}
-        {isPresentationMode && (
-          <button 
-            onClick={togglePresentationMode}
-            className="absolute top-8 right-8 z-50 p-3 bg-bg-card/50 hover:bg-bg-card text-text-main rounded-full backdrop-blur-md border border-border-main transition-all shadow-xl group"
-            title="Sair do Modo Apresentação"
-          >
-            <X className="w-6 h-6 group-hover:scale-110 transition-transform" />
-          </button>
-        )}
-
-        {/* Header */}
-        {!isPresentationMode && (
-          <header className="h-20 bg-bg-card border-b border-border-main flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10">
-            <div>
-              <h1 className="font-heading text-2xl font-bold text-text-main">
-                {navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard'}
-              </h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <motion.button 
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        {/* Exit Presentation Mode Floating Glassmorphic Control */}
+        <AnimatePresence>
+          {isPresentationMode && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="fixed bottom-8 right-8 z-50 pointer-events-auto"
+            >
+              <button 
                 onClick={togglePresentationMode}
-                className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-brand transition-all rounded-lg hover:bg-brand/5 font-medium border border-transparent hover:border-brand/20 cursor-pointer"
-                title="Iniciar Reunião de Diretoria"
+                className="flex items-center gap-3 px-6 py-4 bg-bg-card/75 hover:bg-brand hover:text-white text-text-main rounded-2xl backdrop-blur-xl border border-white/20 dark:border-white/5 transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_50px_rgba(124,58,237,0.3)] group cursor-pointer font-black text-xs uppercase tracking-wider focus:outline-none"
+                title="Sair do Modo de Reunião (ESC)"
               >
-                <Presentation className="w-5 h-5" />
-                <span className="hidden sm:inline text-sm">Iniciar Reunião</span>
-              </motion.button>
+                <X className="w-5 h-5 group-hover:rotate-95 transition-transform duration-300" />
+                <span>Sair do Modo Reunião</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Header with layout animation */}
+        <AnimatePresence mode="wait">
+          {!isPresentationMode && (
+            <motion.header 
+              initial={{ height: 0, opacity: 0, y: -80 }}
+              animate={{ height: 80, opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -80 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="h-20 bg-bg-card border-b border-border-main flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10 overflow-hidden"
+            >
+              <div>
+                <h1 className="font-heading text-2xl font-bold text-text-main">
+                  {navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard'}
+                </h1>
+              </div>
               
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                onClick={toggleDarkMode}
-                className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
-                title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
-              >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                className="relative p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
-              </motion.button>
-              {effectiveIsEditor && (
-                <LiquidMetalButton 
-                  onClick={() => setIsModalOpen(true)}
-                  preset="holo"
-                  className="px-5 py-2.5 rounded-lg active:scale-95 flex items-center gap-2 text-xs font-black uppercase tracking-widest cursor-pointer shadow-md select-none"
+              <div className="flex items-center gap-4">
+                <motion.button 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  onClick={togglePresentationMode}
+                  className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-brand transition-all rounded-lg hover:bg-brand/5 font-medium border border-transparent hover:border-brand/20 cursor-pointer"
+                  title="Iniciar Reunião de Diretoria"
                 >
-                  <Plus className="w-5 h-5 font-black" />
-                  Registrar Backup
-                </LiquidMetalButton>
-              )}
-            </div>
-          </header>
-        )}
+                  <Presentation className="w-5 h-5" />
+                  <span className="hidden sm:inline text-sm">Iniciar Reunião</span>
+                </motion.button>
+                
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  onClick={toggleDarkMode}
+                  className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
+                  title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
+                >
+                  {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  className="relative p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
+                </motion.button>
+                {effectiveIsEditor && (
+                  <LiquidMetalButton 
+                    onClick={() => setIsModalOpen(true)}
+                    preset="holo"
+                    className="px-5 py-2.5 rounded-lg active:scale-95 flex items-center gap-2 text-xs font-black uppercase tracking-widest cursor-pointer shadow-md select-none"
+                  >
+                    <Plus className="w-5 h-5 font-black" />
+                    Registrar Backup
+                  </LiquidMetalButton>
+                )}
+              </div>
+            </motion.header>
+          )}
+        </AnimatePresence>
 
         {/* Scrollable Content */}
         <div className={cn(
-          "flex-1 overflow-y-auto",
-          isPresentationMode ? "p-0 flex items-center justify-center" : "p-4 md:p-8"
+          "flex-1 overflow-y-auto transition-all duration-300",
+          isPresentationMode ? "p-6 md:p-12 lg:p-16 bg-bg-main" : "p-4 md:p-8"
         )}>
           <motion.div
-            key={location.pathname + (isPresentationMode ? '-presentation' : '')}
+            key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 22 }}
@@ -885,7 +912,7 @@ export default function App() {
             }>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardView backups={backups} />} />
+                <Route path="/dashboard" element={<DashboardView backups={backups} isPresentationMode={isPresentationMode} />} />
                 <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} />} />
                 <Route path="/registros" element={<RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} />} />
                 <Route path="/tarefas" element={
