@@ -43,7 +43,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         (request.auth.token != null && 'role' in request.auth.token && request.auth.token.role == 'admin') ||
-        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email == 'joaoribasdossantos@gmail.com') ||
+        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$')) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
@@ -187,10 +187,15 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated(); // Allow reading all users for leaderboard
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'viewer' || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (
+        request.resource.data.role == 'viewer' || 
+        isAdmin() ||
+        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$'))
+      );
       // Allow users to update their own profile (xp, level, etc) but NOT their role, uid, or email unless admin
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
         isAdmin() || 
+        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$')) ||
         (isOwner(userId) && 
          request.resource.data.role == resource.data.role &&
          request.resource.data.uid == resource.data.uid &&
