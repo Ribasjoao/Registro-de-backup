@@ -38,7 +38,7 @@ interface WeeklyExecutiveViewProps {
   tasks: Task[];
 }
 
-export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps) {
+export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filter, setFilter] = useState<{
     week: 'current' | 'previous';
@@ -476,7 +476,7 @@ export function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps
       </div>
     </div>
   );
-}
+});
 
 interface KPICardProps {
   title: string;
@@ -487,7 +487,7 @@ interface KPICardProps {
   trend?: number;
 }
 
-function KPICard({ title, value, desc, icon, variant, trend }: KPICardProps) {
+const KPICard = React.memo(function KPICard({ title, value, desc, icon, variant, trend }: KPICardProps) {
   const colors = {
     success: 'text-success bg-success/10 border-success/20',
     warning: 'text-warning bg-warning/10 border-warning/20',
@@ -498,6 +498,7 @@ function KPICard({ title, value, desc, icon, variant, trend }: KPICardProps) {
   return (
     <motion.div 
       whileHover={{ y: -4 }}
+      style={{ willChange: "transform, opacity" }}
       className="card p-6 bg-bg-card border border-border-main relative overflow-hidden group shadow-sm"
     >
       <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-12 -mt-12 rounded-full opacity-5 group-hover:scale-125 transition-transform", colors[variant].split(' ')[1])} />
@@ -524,4 +525,4 @@ function KPICard({ title, value, desc, icon, variant, trend }: KPICardProps) {
       </div>
     </motion.div>
   );
-}
+});

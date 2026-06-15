@@ -98,7 +98,7 @@ const usersItemVariants = {
 
 type SettingsTab = 'storage' | 'clients' | 'backup-types' | 'retention' | 'notifications' | 'security' | 'users' | 'audit' | 'reset';
 
-export function SettingsView({ 
+export const SettingsView = React.memo(function SettingsView({ 
   clients, 
   onAddClient, 
   onUpdateClient, 
@@ -1413,5 +1413,5 @@ export function SettingsView({
       </div>
     </div>
   );
-}
+});
 

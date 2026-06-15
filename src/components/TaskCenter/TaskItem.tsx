@@ -29,7 +29,7 @@ interface TaskItemProps {
   compact?: boolean;
 }
 
-export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: TaskItemProps) {
+export const TaskItem = React.memo(function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: TaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const type = TASK_TYPES.find(t => t.value === task.type);
   const priority = TASK_PRIORITIES.find(p => p.value === task.priority);
@@ -82,7 +82,8 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
     <motion.div 
       whileHover={task.status !== 'done' ? { scale: 1.018, y: -2 } : undefined}
       whileTap={task.status !== 'done' ? { scale: 0.99 } : undefined}
-      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      style={{ willChange: "transform, opacity" }}
       className={cn(
         "group relative bg-bg-card/75 dark:bg-bg-card/45 backdrop-blur-md border rounded-2xl p-4 transition-all duration-300 cursor-pointer select-none",
         task.isGolden 
@@ -279,4 +280,4 @@ export function TaskItem({ task, onUpdateTask, onEditTask, compact = false }: Ta
       </div>
     </motion.div>
   );
-}
+});

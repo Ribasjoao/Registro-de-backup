@@ -10,7 +10,7 @@ interface SortableTaskProps {
   onEditTask: (task: Task) => void;
 }
 
-export function SortableTask({ task, onUpdateTask, onEditTask }: SortableTaskProps) {
+export const SortableTask = React.memo(function SortableTask({ task, onUpdateTask, onEditTask }: SortableTaskProps) {
   const {
     attributes,
     listeners,
@@ -42,4 +42,4 @@ export function SortableTask({ task, onUpdateTask, onEditTask }: SortableTaskPro
       />
     </div>
   );
-}
+});

@@ -11,7 +11,7 @@ interface TaskListProps {
   onEditTask: (task: Task) => void;
 }
 
-export function TaskList({ tasks, onUpdateTask, onEditTask }: TaskListProps) {
+export const TaskList = React.memo(function TaskList({ tasks, onUpdateTask, onEditTask }: TaskListProps) {
   const [groupBy, setGroupBy] = useState<'type' | 'client' | 'priority' | 'status'>('type');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'rotina': true,
@@ -109,4 +109,4 @@ export function TaskList({ tasks, onUpdateTask, onEditTask }: TaskListProps) {
       </div>
     </div>
   );
-}
+});

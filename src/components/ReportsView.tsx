@@ -17,7 +17,7 @@ interface ReportsViewProps {
   backups: BackupRecord[];
 }
 
-export function ReportsView({ backups }: ReportsViewProps) {
+export const ReportsView = React.memo(function ReportsView({ backups }: ReportsViewProps) {
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -152,4 +152,4 @@ export function ReportsView({ backups }: ReportsViewProps) {
       )}
     </div>
   );
-}
+});

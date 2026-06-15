@@ -12,7 +12,7 @@ interface RecordsViewProps {
   onDelete?: (id: string) => void;
 }
 
-export function RecordsView({ backups, onEdit, onDelete }: RecordsViewProps) {
+export const RecordsView = React.memo(function RecordsView({ backups, onEdit, onDelete }: RecordsViewProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'week' | 'month' | 'all'>('month');
@@ -360,4 +360,4 @@ export function RecordsView({ backups, onEdit, onDelete }: RecordsViewProps) {
       />
     </div>
   );
-}
+});

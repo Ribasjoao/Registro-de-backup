@@ -75,7 +75,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
   return null;
 };
 
-export function DashboardView({ backups, isPresentationMode = false }: DashboardViewProps) {
+export const DashboardView = React.memo(function DashboardView({ backups, isPresentationMode = false }: DashboardViewProps) {
   const [filterType, setFilterType] = useState<'reuniao' | '7_dias' | '30_dias'>('reuniao');
 
   // Calculates the Friday-closing weekly cycle range
@@ -383,6 +383,7 @@ export function DashboardView({ backups, isPresentationMode = false }: Dashboard
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        style={{ willChange: "transform, opacity" }}
         className={cn(
           "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 transition-all duration-300",
           isPresentationMode ? "gap-6 lg:gap-8 mb-4 scale-[1.01]" : "gap-4"
@@ -638,7 +639,7 @@ export function DashboardView({ backups, isPresentationMode = false }: Dashboard
 
     </div>
   );
-}
+});
 
 interface KPICardProps {
   title: string;
@@ -651,12 +652,13 @@ interface KPICardProps {
   isPresentationMode?: boolean;
 }
 
-function KPICard({ title, value, subtitle, icon, trend, trendUp, alert, isPresentationMode }: KPICardProps) {
+const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, trend, trendUp, alert, isPresentationMode }: KPICardProps) {
   return (
     <motion.div 
       variants={itemVariants}
       whileHover={{ scale: isPresentationMode ? 1.04 : 1.03, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
       whileTap={{ scale: 0.98 }}
+      style={{ willChange: "transform, opacity" }}
       className={cn(
         "card transition-all duration-300 border-l-4 shadow-sm",
         alert ? "border-l-danger bg-danger/[0.02]" : "border-l-brand",
@@ -700,4 +702,4 @@ function KPICard({ title, value, subtitle, icon, trend, trendUp, alert, isPresen
       </div>
     </motion.div>
   );
-}
+});

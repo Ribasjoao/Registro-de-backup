@@ -15,7 +15,7 @@ interface DestinationsViewProps {
   isAdmin?: boolean;
 }
 
-export function DestinationsView({ destinations, clients, onUpdate, onAdd, onDelete, isAdmin = true }: DestinationsViewProps) {
+export const DestinationsView = React.memo(function DestinationsView({ destinations, clients, onUpdate, onAdd, onDelete, isAdmin = true }: DestinationsViewProps) {
   const [editingDest, setEditingDest] = useState<StorageDestination | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deletingDestId, setDeletingDestId] = useState<string | null>(null);
@@ -181,4 +181,4 @@ export function DestinationsView({ destinations, clients, onUpdate, onAdd, onDel
       />
     </div>
   );
-}
+});
