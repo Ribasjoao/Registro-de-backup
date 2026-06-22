@@ -33,7 +33,63 @@ const itemVariants = {
 interface DashboardViewProps {
   backups: BackupRecord[];
   isPresentationMode?: boolean;
+  isLoading?: boolean;
 }
+
+const DashboardSkeleton = () => (
+  <div className="space-y-8 animate-pulse p-4">
+    {/* Header Skeleton */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-2">
+        <div className="h-8 w-60 bg-border-main/50 rounded-xl" />
+        <div className="h-4 w-80 bg-border-main/30 rounded-lg" />
+      </div>
+      <div className="h-10 w-44 bg-border-main/40 rounded-xl" />
+    </div>
+    
+    {/* KPI Skeleton Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card p-6 border border-border-main/60 rounded-3xl h-32 flex flex-col justify-between bg-bg-card/30">
+          <div className="flex justify-between items-start">
+            <div className="h-4 w-32 bg-border-main/50 rounded-md" />
+            <div className="w-8 h-8 rounded-xl bg-border-main/40" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-7 w-20 bg-border-main/60 rounded-md" />
+            <div className="h-3.5 w-48 bg-border-main/30 rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Section Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 card p-6 border border-border-main/60 rounded-3xl h-[400px] bg-bg-card/20" />
+      <div className="card p-6 border border-border-main/60 rounded-3xl h-[400px] bg-bg-card/20" />
+    </div>
+  </div>
+);
+
+const EmptyDashboardState = () => (
+  <div className="flex flex-col items-center justify-center p-12 text-center card border border-dashed border-border-main/80 rounded-3xl bg-bg-card/35 min-h-[500px]">
+    <div className="w-20 h-20 rounded-2xl bg-brand/5 border border-brand/10 flex items-center justify-center text-brand mb-6 animate-pulse">
+      <Shield className="w-10 h-10 text-brand animate-bounce" />
+    </div>
+    <h3 className="font-heading text-xl font-bold text-text-main">Status da Infraestrutura: Nenhum Backup Registrado</h3>
+    <p className="text-sm text-text-secondary mt-2 max-w-sm">
+      Não detectamos nenhum registro de rotina nas bases de auditoria. Para iniciar o monitoramento, adicione o primeiro cliente ou registre um lote de backup.
+    </p>
+    <div className="mt-8 flex flex-col sm:flex-row gap-3">
+      <div className="px-4 py-2 bg-brand/10 text-brand text-xs font-black uppercase tracking-wider rounded-xl border border-brand/25">
+        1. Cadastre Clientes nas Configurações
+      </div>
+      <div className="px-4 py-2 bg-brand/10 text-brand text-xs font-black uppercase tracking-wider rounded-xl border border-brand/25">
+        2. Clique em "Registrar Backup" no topo
+      </div>
+    </div>
+  </div>
+);
 
 interface TooltipPayloadItem {
   color: string;
@@ -75,7 +131,14 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
   return null;
 };
 
-export const DashboardView = React.memo(function DashboardView({ backups, isPresentationMode = false }: DashboardViewProps) {
+export const DashboardView = React.memo(function DashboardView({ backups, isPresentationMode = false, isLoading = false }: DashboardViewProps) {
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyDashboardState />;
+  }
   const [filterType, setFilterType] = useState<'reuniao' | '7_dias' | '30_dias'>('reuniao');
 
   // Calculates the Friday-closing weekly cycle range

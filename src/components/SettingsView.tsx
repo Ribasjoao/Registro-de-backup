@@ -61,6 +61,7 @@ interface SettingsViewProps {
   onDeleteUser?: (userId: string) => Promise<void>;
   currentUserId?: string;
   isAdmin: boolean;
+  isLoading?: boolean;
   onResetData?: (
     resetType: 'personal' | 'system',
     systemOptions?: {
@@ -71,6 +72,36 @@ interface SettingsViewProps {
     }
   ) => Promise<void>;
 }
+
+const SettingsSkeleton = () => (
+  <div className="space-y-6 animate-pulse p-4">
+    {/* Page Header */}
+    <div className="space-y-1.5">
+      <div className="h-8 w-48 bg-border-main/50 rounded-xl" />
+      <div className="h-4 w-72 bg-border-main/30 rounded-lg" />
+    </div>
+
+    {/* Dual Layout */}
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="space-y-2 card p-4 border border-border-main/60 rounded-3xl h-[340px] bg-bg-card/25">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-10 bg-border-main/30 rounded-lg w-full" />
+        ))}
+      </div>
+      
+      <div className="md:col-span-3 card p-8 border border-border-main/60 rounded-3xl h-[450px] bg-bg-card/30 space-y-4">
+        <div className="h-6 w-56 bg-border-main/50 rounded-md" />
+        <div className="h-4 w-96 bg-border-main/30 rounded-md" />
+        <div className="h-[1px] bg-border-main/20 w-full my-4" />
+        <div className="space-y-3">
+          <div className="h-12 bg-border-main/25 rounded-xl" />
+          <div className="h-12 bg-border-main/25 rounded-xl" />
+          <div className="h-12 bg-border-main/25 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const usersContainerVariants = {
   hidden: { opacity: 0 },
@@ -116,8 +147,12 @@ export const SettingsView = React.memo(function SettingsView({
   onDeleteUser,
   currentUserId,
   isAdmin,
+  isLoading = false,
   onResetData
 }: SettingsViewProps) {
+  if (isLoading) {
+    return <SettingsSkeleton />;
+  }
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [newClientName, setNewClientName] = useState('');
   const [newBackupTypeName, setNewBackupTypeName] = useState('');

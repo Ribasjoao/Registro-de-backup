@@ -325,6 +325,7 @@ export function RegisterBackupModal({
       isOpen={isOpen} 
       onClose={onClose} 
       title={initialData ? "Editar Registro de Auditoria" : "Nova Auditoria de Infraestrutura"}
+      maxWidth="max-w-3xl"
     >
       <div className="space-y-4 pr-1">
         

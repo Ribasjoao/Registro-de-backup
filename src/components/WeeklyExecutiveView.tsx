@@ -38,9 +38,59 @@ import { toast } from 'react-hot-toast';
 interface WeeklyExecutiveViewProps {
   backups: BackupRecord[];
   tasks: Task[];
+  isLoading?: boolean;
 }
 
-export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps) {
+const WeeklySkeleton = () => (
+  <div className="space-y-6 animate-pulse p-4">
+    {/* Page Header */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-1.5">
+        <div className="h-8 w-60 bg-border-main/50 rounded-xl" />
+        <div className="h-4 w-80 bg-border-main/30 rounded-lg" />
+      </div>
+      <div className="flex gap-2">
+        <div className="h-10 w-28 bg-border-main/40 rounded-xl" />
+        <div className="h-10 w-28 bg-border-main/40 rounded-xl" />
+      </div>
+    </div>
+    
+    {/* Main Card */}
+    <div className="card p-8 border border-border-main/60 rounded-3xl h-[600px] bg-bg-card/25 flex flex-col justify-between">
+      <div className="space-y-4">
+        <div className="h-6 w-96 bg-border-main/60 rounded-md" />
+        <div className="h-4 w-full bg-border-main/30 rounded-md" />
+        <div className="h-4 w-5/6 bg-border-main/20 rounded-md" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="h-48 bg-border-main/30 rounded-2xl" />
+        <div className="h-48 bg-border-main/30 rounded-2xl" />
+        <div className="h-48 bg-border-main/30 rounded-2xl" />
+      </div>
+    </div>
+  </div>
+);
+
+const EmptyWeeklyState = () => (
+  <div className="flex flex-col items-center justify-center p-12 text-center card border border-dashed border-border-main/80 rounded-3xl bg-bg-card/35 min-h-[500px]">
+    <div className="w-20 h-20 rounded-2xl bg-brand/5 border border-brand/10 flex items-center justify-center text-brand mb-6">
+      <Calendar className="w-10 h-10 text-brand animate-pulse" />
+    </div>
+    <h3 className="font-heading text-xl font-bold text-text-main">Resumo Executivo Vazio</h3>
+    <p className="text-sm text-text-secondary mt-2 max-w-sm">
+      Ainda não existem auditorias integradas para o compilado corporativo. Registre os primeiros backups para gerar o balanço financeiro, operacional e de perigos do período.
+    </p>
+  </div>
+);
+
+export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ backups, tasks, isLoading = false }: WeeklyExecutiveViewProps) {
+  if (isLoading) {
+    return <WeeklySkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyWeeklyState />;
+  }
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);

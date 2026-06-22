@@ -10,9 +10,76 @@ interface RecordsViewProps {
   backups: BackupRecord[];
   onEdit?: (backup: BackupRecord) => void;
   onDelete?: (id: string) => void;
+  isLoading?: boolean;
 }
 
-export const RecordsView = React.memo(function RecordsView({ backups, onEdit, onDelete }: RecordsViewProps) {
+const RecordsSkeleton = () => (
+  <div className="space-y-6 animate-pulse p-4">
+    {/* Page Header */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-1.5">
+        <div className="h-8 w-48 bg-border-main/50 rounded-xl" />
+        <div className="h-4 w-72 bg-border-main/30 rounded-lg" />
+      </div>
+      <div className="flex gap-2">
+        <div className="h-10 w-28 bg-border-main/40 rounded-xl" />
+        <div className="h-10 w-28 bg-border-main/40 rounded-xl" />
+      </div>
+    </div>
+
+    {/* Search and Filters Skeleton */}
+    <div className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-border-main/40 bg-bg-card/20">
+      <div className="flex-1 h-10 bg-border-main/30 rounded-xl" />
+      <div className="h-10 w-44 bg-border-main/30 rounded-xl" />
+      <div className="h-10 w-44 bg-border-main/30 rounded-xl" />
+    </div>
+
+    {/* Table Skeleton */}
+    <div className="border border-border-main/50 rounded-2xl overflow-hidden bg-bg-card/30">
+      <div className="h-12 bg-border-main/40 border-b border-border-main/60" />
+      <div className="divide-y divide-border-main/30">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-16 flex items-center justify-between px-6">
+            <div className="flex gap-4 items-center">
+              <div className="w-8 h-8 rounded-full bg-border-main/30 shrink-0" />
+              <div className="space-y-1.5">
+                <div className="h-4 w-40 bg-border-main/40 rounded-md" />
+                <div className="h-3 w-60 bg-border-main/20 rounded-md" />
+              </div>
+            </div>
+            <div className="h-4 w-24 bg-border-main/30 rounded-md" />
+            <div className="h-6 w-16 bg-border-main/40 rounded-full" />
+            <div className="flex gap-2">
+              <div className="w-8 h-8 bg-border-main/30 rounded-lg" />
+              <div className="w-8 h-8 bg-border-main/30 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const EmptyRecordsState = () => (
+  <div className="flex flex-col items-center justify-center p-12 text-center card border border-dashed border-border-main/80 rounded-3xl bg-bg-card/35 min-h-[400px]">
+    <div className="w-16 h-16 rounded-2xl bg-brand/5 border border-brand/10 flex items-center justify-center text-brand mb-5">
+      <CalendarDays className="w-8 h-8 text-brand animate-pulse" />
+    </div>
+    <h3 className="font-heading text-lg font-bold text-text-main">Histórico Vazio: Sem Auditorias Cadastradas</h3>
+    <p className="text-sm text-text-secondary mt-1.5 max-w-sm">
+      Não há nenhuma rotina de backup salva em nosso arquivo unificado para corresponder às especificações selecionadas.
+    </p>
+  </div>
+);
+
+export const RecordsView = React.memo(function RecordsView({ backups, onEdit, onDelete, isLoading = false }: RecordsViewProps) {
+  if (isLoading) {
+    return <RecordsSkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyRecordsState />;
+  }
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'week' | 'month' | 'all'>('month');

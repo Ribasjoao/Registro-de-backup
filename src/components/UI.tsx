@@ -8,9 +8,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-xl" }: ModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -26,18 +27,21 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-xl bg-bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-border-main/50 dark:border-white/10"
+            className={cn(
+              "relative w-full bg-bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-border-main/50 dark:border-white/10 flex flex-col max-h-[90vh]",
+              maxWidth
+            )}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-main/50 dark:border-white/5">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-main/50 dark:border-white/5 shrink-0">
               <h2 className="font-heading text-xl font-bold text-text-main">{title}</h2>
               <button
                 onClick={onClose}
-                className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-lg hover:bg-bg-main"
+                className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-lg hover:bg-bg-main cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               {children}
             </div>
           </motion.div>

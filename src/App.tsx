@@ -89,12 +89,22 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  
+  const [loadedStates, setLoadedStates] = useState({
+    backups: false,
+    clients: false,
+    destinations: false,
+    backupTypes: false,
+    users: false
+  });
+
   const [clients, setClients] = useState<Client[]>([]);
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [destinations, setDestinations] = useState<StorageDestination[]>([]);
   const [backupTypes, setBackupTypes] = useState<BackupType[]>([]);
   const {
     tasks,
+    loading: tasksLoading,
     addTask,
     updateTask,
     deleteTask,
@@ -103,6 +113,8 @@ export default function App() {
   } = useTasks(user?.uid ?? undefined, user?.displayName || user?.email);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [editingBackup, setEditingBackup] = useState<BackupRecord | undefined>(undefined);
+
+  const isLoadingData = !loadedStates.backups || !loadedStates.clients || !loadedStates.destinations || !loadedStates.backupTypes || !loadedStates.users || tasksLoading;
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
@@ -279,28 +291,44 @@ export default function App() {
     const unsubscribeBackups = onSnapshot(qBackups, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BackupRecord));
       setBackups(data);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'backups'));
+      setLoadedStates(prev => ({ ...prev, backups: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, backups: true }));
+      handleFirestoreError(error, OperationType.LIST, 'backups');
+    });
 
     // Listen to Clients
     const qClients = query(collection(db, 'clients'), orderBy('name', 'asc'));
     const unsubscribeClients = onSnapshot(qClients, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
       setClients(data);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'clients'));
+      setLoadedStates(prev => ({ ...prev, clients: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, clients: true }));
+      handleFirestoreError(error, OperationType.LIST, 'clients');
+    });
 
     // Listen to Destinations
     const qDestinations = query(collection(db, 'destinations'), orderBy('name', 'asc'));
     const unsubscribeDestinations = onSnapshot(qDestinations, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StorageDestination));
       setDestinations(data);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'destinations'));
+      setLoadedStates(prev => ({ ...prev, destinations: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, destinations: true }));
+      handleFirestoreError(error, OperationType.LIST, 'destinations');
+    });
 
     // Listen to Backup Types
     const qBackupTypes = query(collection(db, 'backup_types'), orderBy('name', 'asc'));
     const unsubscribeBackupTypes = onSnapshot(qBackupTypes, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BackupType));
       setBackupTypes(data);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'backup_types'));
+      setLoadedStates(prev => ({ ...prev, backupTypes: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, backupTypes: true }));
+      handleFirestoreError(error, OperationType.LIST, 'backup_types');
+    });
 
     // Listen to Users (For Leaderboard and Admin)
     const qUsers = query(collection(db, 'users'));
@@ -308,7 +336,11 @@ export default function App() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
       data.sort((a, b) => (b.xp || 0) - (a.xp || 0));
       setUsers(data);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+      setLoadedStates(prev => ({ ...prev, users: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, users: true }));
+      handleFirestoreError(error, OperationType.LIST, 'users');
+    });
 
     return () => {
       unsubscribeUser();
@@ -951,9 +983,9 @@ export default function App() {
             }>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardView backups={backups} isPresentationMode={isPresentationMode} />} />
-                <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} />} />
-                <Route path="/registros" element={<RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} />} />
+                <Route path="/dashboard" element={<DashboardView backups={backups} isPresentationMode={isPresentationMode} isLoading={isLoadingData} />} />
+                <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} isLoading={isLoadingData} />} />
+                <Route path="/registros" element={<RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} isLoading={isLoadingData} />} />
                 <Route path="/tarefas" element={
                   <TaskCenter 
                     tasks={tasks} 
@@ -985,6 +1017,7 @@ export default function App() {
                       onUpdateBackupType={updateBackupType}
                       onDeleteBackupType={deleteBackupType}
                       isAdmin={effectiveIsAdmin}
+                      isLoading={isLoadingData}
                       onResetData={handleResetData}
                     />
                   } />
