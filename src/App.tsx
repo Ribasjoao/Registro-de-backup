@@ -669,17 +669,56 @@ export default function App() {
     setEditingBackup(undefined);
   };
 
-  const handleBackupSave = async (backupData: Partial<BackupRecord>) => {
+  const handleBackupSave = async (backupData: Partial<BackupRecord> | Partial<BackupRecord>[]) => {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      const isNew = !('id' in backupData && backupData.id);
-
-      // Save Backup
-      if (!isNew) {
-        await updateBackup(backupData as BackupRecord);
+      if (Array.isArray(backupData)) {
+        // Batch validation registration
+        const toastId = toast.loading(`Registrando ${backupData.length} backups...`);
+        try {
+          const promises = backupData.map(async (bk) => {
+            const docRef = await addDoc(collection(db, 'backups'), bk);
+            
+            // Auto-task for failed backups
+            if (bk.status === 'failed') {
+              await addTask({
+                title: `Tratar falha: ${bk.title}`,
+                type: 'incidente',
+                status: 'today',
+                priority: 'critical',
+                relatedBackupId: docRef.id,
+                relatedClient: bk.client || '',
+                relatedRecordTitle: bk.title || '',
+                source: 'incident',
+                notes: 'Gerada automaticamente por falha no backup.'
+              });
+            }
+          });
+          
+          await Promise.all(promises);
+          toast.success(`${backupData.length} backups registrados com sucesso!`, { id: toastId });
+          
+          if (user && backupData.length > 0) {
+            await logAction(
+              user.uid,
+              appUser?.displayName || user.displayName || user.email || 'Usuário',
+              'CREATE_BACKUP_BATCH',
+              `Registrou lote de ${backupData.length} backups para o cliente "${backupData[0].client}"`
+            );
+          }
+        } catch (error) {
+          toast.error('Erro ao registrar lote de backups.', { id: toastId });
+          handleFirestoreError(error, OperationType.CREATE, 'backups_batch');
+        }
       } else {
-        await addBackup(backupData as Omit<BackupRecord, 'id'>);
+        // Individual update or single save
+        const isNew = !('id' in backupData && backupData.id);
+        if (!isNew) {
+          await updateBackup(backupData as BackupRecord);
+        } else {
+          await addBackup(backupData as Omit<BackupRecord, 'id'>);
+        }
       }
       handleCloseModal();
     } catch (error) {
@@ -962,6 +1001,7 @@ export default function App() {
           isOpen={isModalOpen} 
           onClose={handleCloseModal} 
           clients={clients}
+          backups={backups}
           backupTypes={backupTypes}
           onSave={handleBackupSave}
           isSaving={isSaving}

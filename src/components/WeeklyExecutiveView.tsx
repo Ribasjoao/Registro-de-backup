@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -14,7 +14,8 @@ import {
   Layers,
   Activity,
   ArrowUpRight,
-  Maximize2
+  Maximize2,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -32,6 +33,7 @@ import {
 import { BackupRecord, Task, BackupStatus, Criticality } from '../types';
 import { cn } from '../lib/utils';
 import { StatusBadge } from './UI';
+import { toast } from 'react-hot-toast';
 
 interface WeeklyExecutiveViewProps {
   backups: BackupRecord[];
@@ -40,6 +42,9 @@ interface WeeklyExecutiveViewProps {
 
 export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ backups, tasks }: WeeklyExecutiveViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const [filter, setFilter] = useState<{
     week: 'current' | 'previous';
     onlyIssues: boolean;
@@ -49,6 +54,87 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
     onlyIssues: false,
     client: 'all',
   });
+
+  const handleExportPDF = async () => {
+    if (isExporting || !reportRef.current) return;
+    setIsExporting(true);
+    const toastId = toast.loading('Calculando layouts e preparando PDF...');
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const element = reportRef.current;
+      const isDark = document.documentElement.classList.contains('dark');
+
+      // Take snapshot using html2canvas
+      const canvas = await html2canvas(element, {
+        scale: 2, // High DPI capture for crisp fonts and graphics
+        useCORS: true,
+        backgroundColor: isDark ? '#0B0F19' : '#F3F4F6',
+        logging: false,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.getElementById('weekly-report-container');
+          if (clonedElement) {
+            clonedElement.style.width = '1440px';
+            clonedElement.style.padding = '48px';
+            clonedElement.style.margin = '0 auto';
+            
+            if (isDark) {
+              clonedElement.classList.add('dark');
+            } else {
+              clonedElement.classList.remove('dark');
+            }
+
+            // Clean up visual noise - hide ignored elements
+            const ignoredElements = clonedElement.querySelectorAll('[data-html2canvas-ignore="true"]');
+            ignoredElements.forEach(item => {
+              (item as HTMLElement).style.display = 'none';
+            });
+          }
+        }
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // Define default PDF landscape settings
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
+      const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+
+      const ratio = imgWidth / imgHeight;
+      const width = pdfWidth;
+      const height = pdfWidth / ratio;
+
+      if (height > pdfHeight) {
+        let remainingHeight = height;
+        let position = 0;
+
+        while (remainingHeight > 0) {
+          pdf.addImage(imgData, 'PNG', 0, position, width, height, undefined, 'FAST');
+          remainingHeight -= pdfHeight;
+          position -= pdfHeight;
+          if (remainingHeight > 0) {
+            pdf.addPage();
+          }
+        }
+      } else {
+        // Center content vertically on landscape page
+        const yOffset = (pdfHeight - height) / 2;
+        pdf.addImage(imgData, 'PNG', 0, yOffset, width, height, undefined, 'FAST');
+      }
+
+      pdf.save('Relatorio_Executivo_Backup.pdf');
+      toast.success('Relatório exportado com sucesso! 📄', { id: toastId });
+    } catch (error) {
+      console.error('Erro ao gerar relatório em PDF:', error);
+      toast.error('Erro ao gerar relatório PDF. Tente novamente.', { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Date Logic
   const dates = useMemo(() => {
@@ -159,10 +245,14 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
   };
 
   return (
-    <div className={cn(
-      "space-y-8 animate-in fade-in duration-700",
-      isFullscreen && "fixed inset-0 z-[100] bg-bg-main overflow-y-auto p-12"
-    )}>
+    <div 
+      ref={reportRef}
+      id="weekly-report-container"
+      className={cn(
+        "space-y-8 animate-in fade-in duration-700",
+        isFullscreen && "fixed inset-0 z-[100] bg-bg-main overflow-y-auto p-12"
+      )}
+    >
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -179,7 +269,7 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-bg-card p-2 rounded-2xl border border-border-main shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 bg-bg-card p-2 rounded-2xl border border-border-main shadow-sm" data-html2canvas-ignore="true">
           <div className="flex bg-bg-main rounded-xl p-1">
             <button 
               onClick={() => setFilter(f => ({ ...f, week: 'current' }))}
@@ -213,6 +303,34 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+
+          {/* Premium Glassmorphism Export PDF Button */}
+          <button 
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all font-bold text-xs cursor-pointer shadow-sm active:scale-95",
+              "bg-white/10 dark:bg-white/5 border border-white/20 hover:border-brand/35 text-text-main hover:bg-white/20 dark:hover:bg-white/10 hover:text-brand",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            title="Exportar Relatório em PDF"
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin h-3.5 w-3.5 text-brand" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Gerando PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exportar PDF</span>
+              </>
+            )}
+          </button>
 
           <button 
             onClick={toggleFullscreen}
@@ -465,6 +583,7 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
               
               <button 
                 onClick={() => {}}
+                data-html2canvas-ignore="true"
                 className="w-full py-3 rounded-2xl bg-brand text-white text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-dark transition-all flex items-center justify-center gap-2"
               >
                 Planejar Nova Ação
