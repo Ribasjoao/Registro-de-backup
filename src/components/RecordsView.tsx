@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Calendar, Filter, Download, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, Edit2, Trash2, LayoutList, CalendarDays } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { StatusBadge } from './UI';
 import { cn } from '../lib/utils';
-import { BackupRecord } from '../types';
+import { BackupRecord, Client } from '../types';
 import { BackupDetailsModal } from './BackupDetailsModal';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 
 interface RecordsViewProps {
   backups: BackupRecord[];
+  clients?: Client[];
   onEdit?: (backup: BackupRecord) => void;
   onDelete?: (id: string) => void;
   isLoading?: boolean;
@@ -72,7 +74,8 @@ const EmptyRecordsState = () => (
   </div>
 );
 
-export const RecordsView = React.memo(function RecordsView({ backups, onEdit, onDelete, isLoading = false }: RecordsViewProps) {
+export const RecordsView = React.memo(function RecordsView({ backups, clients, onEdit, onDelete, isLoading = false }: RecordsViewProps) {
+  const navigate = useNavigate();
   if (isLoading) {
     return <RecordsSkeleton />;
   }
@@ -189,7 +192,19 @@ export const RecordsView = React.memo(function RecordsView({ backups, onEdit, on
         <StatusBadge status={backup.status} />
       </td>
       <td className="py-4 px-6 whitespace-nowrap font-medium text-text-main">
-        {backup.client}
+        {(() => {
+          const clientObj = clients?.find(c => c.name.toLowerCase() === backup.client.toLowerCase());
+          return clientObj ? (
+            <button
+              onClick={() => navigate(`/cliente/${clientObj.id}`)}
+              className="hover:text-brand hover:underline text-left cursor-pointer transition-colors font-semibold"
+            >
+              {backup.client}
+            </button>
+          ) : (
+            <span>{backup.client}</span>
+          );
+        })()}
       </td>
       <td className="py-4 px-6 whitespace-nowrap">
         {backup.backupType ? (
@@ -409,6 +424,7 @@ export const RecordsView = React.memo(function RecordsView({ backups, onEdit, on
         isOpen={isDetailsOpen} 
         onClose={() => setIsDetailsOpen(false)} 
         backup={selectedBackup} 
+        clients={clients}
       />
 
       <DeleteConfirmationModal 

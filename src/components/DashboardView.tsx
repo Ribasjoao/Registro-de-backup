@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download } from 'lucide-react';
-import { BackupRecord } from '../types';
+import { BackupRecord, Client } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -32,6 +33,7 @@ const itemVariants = {
 
 interface DashboardViewProps {
   backups: BackupRecord[];
+  clients?: Client[];
   isPresentationMode?: boolean;
   isLoading?: boolean;
 }
@@ -131,7 +133,8 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
   return null;
 };
 
-export const DashboardView = React.memo(function DashboardView({ backups, isPresentationMode = false, isLoading = false }: DashboardViewProps) {
+export const DashboardView = React.memo(function DashboardView({ backups, clients, isPresentationMode = false, isLoading = false }: DashboardViewProps) {
+  const navigate = useNavigate();
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -676,7 +679,22 @@ export const DashboardView = React.memo(function DashboardView({ backups, isPres
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold text-brand uppercase tracking-wider">{b.client}</span>
+                      {(() => {
+                        const clientObj = clients?.find(c => c.name.toLowerCase() === b.client.toLowerCase());
+                        return clientObj ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/cliente/${clientObj.id}`);
+                            }}
+                            className="text-[10px] font-bold text-brand hover:underline uppercase tracking-wider cursor-pointer transition-colors text-left"
+                          >
+                            {b.client}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-brand uppercase tracking-wider">{b.client}</span>
+                        );
+                      })()}
                       <span className="text-[10px] text-text-secondary">•</span>
                       <span className="text-[10px] text-text-secondary font-semibold">{b.backupType || 'Nakivo'}</span>
                     </div>

@@ -24,7 +24,8 @@ import {
   Trophy,
   Presentation,
   X,
-  LayoutList
+  LayoutList,
+  Users
 } from 'lucide-react';
 import { cn } from './lib/utils';
 
@@ -36,6 +37,8 @@ const DestinationsView = lazy(() => import('./components/DestinationsView').then
 const ReportsView = lazy(() => import('./components/ReportsView').then(m => ({ default: m.ReportsView })));
 const TaskCenter = lazy(() => import('./components/TaskCenter/TaskCenter').then(m => ({ default: m.TaskCenter })));
 const WeeklyExecutiveView = lazy(() => import('./components/WeeklyExecutiveView').then(m => ({ default: m.WeeklyExecutiveView })));
+const ClientsListView = lazy(() => import('./components/ClientsListView').then(m => ({ default: m.ClientsListView })));
+const ClientDashboardView = lazy(() => import('./components/ClientDashboardView').then(m => ({ default: m.ClientDashboardView })));
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { LiquidMetalButton } from './components/LiquidMetal';
@@ -784,6 +787,7 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'weekly', label: 'Resumo Semanal', icon: Presentation, path: '/semanal' },
     { id: 'records', label: 'Registros', icon: ListTodo, path: '/registros' },
+    { id: 'clients', label: 'Clientes', icon: Users, path: '/clientes' },
     { id: 'tasks', label: 'Tarefas', icon: LayoutList, path: '/tarefas' },
     { id: 'destinations', label: 'Destinos', icon: Database, path: '/destinos' },
     { id: 'reports', label: 'Relatórios IA', icon: Sparkles, path: '/relatorios' },
@@ -910,7 +914,9 @@ export default function App() {
             >
               <div>
                 <h1 className="font-heading text-2xl font-bold text-text-main">
-                  {navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard'}
+                  {location.pathname.startsWith('/cliente/') 
+                    ? 'Dashboard do Cliente' 
+                    : (navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard')}
                 </h1>
               </div>
               
@@ -983,9 +989,9 @@ export default function App() {
             }>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardView backups={backups} isPresentationMode={isPresentationMode} isLoading={isLoadingData} />} />
+                <Route path="/dashboard" element={<DashboardView backups={backups} clients={clients} isPresentationMode={isPresentationMode} isLoading={isLoadingData} />} />
                 <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} isLoading={isLoadingData} />} />
-                <Route path="/registros" element={<RecordsView backups={backups} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} isLoading={isLoadingData} />} />
+                <Route path="/registros" element={<RecordsView backups={backups} clients={clients} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} isLoading={isLoadingData} />} />
                 <Route path="/tarefas" element={
                   <TaskCenter 
                     tasks={tasks} 
@@ -997,6 +1003,8 @@ export default function App() {
                 } />
                 <Route path="/destinos" element={<DestinationsView destinations={destinations} clients={clients} onUpdate={effectiveIsEditor ? updateDestination : async () => {}} onAdd={effectiveIsEditor ? addDestination : async () => {}} onDelete={effectiveIsAdmin ? deleteDestination : () => {}} isAdmin={effectiveIsEditor} />} />
                 <Route path="/relatorios" element={<ReportsView backups={backups} />} />
+                <Route path="/clientes" element={<ClientsListView clients={clients} backups={backups} isLoading={isLoadingData} />} />
+                <Route path="/cliente/:clientId" element={<ClientDashboardView clients={clients} backups={backups} isLoading={isLoadingData} />} />
                 {effectiveIsAdmin && (
                   <Route path="/configuracoes" element={
                     <SettingsView 

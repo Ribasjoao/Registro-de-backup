@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Calendar, User, Building2, CheckCircle2, AlertTriangle, XCircle, FileText, ClipboardList, Database, HardDrive, ShieldCheck } from 'lucide-react';
-import { BackupRecord } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { BackupRecord, Client } from '../types';
 import { StatusBadge } from './UI';
 import { cn } from '../lib/utils';
 
@@ -8,6 +9,7 @@ interface BackupDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   backup: BackupRecord | null;
+  clients?: Client[];
 }
 
 function DetailBox({ label, value, variant = 'info' }: { label: string, value: string, variant?: 'info' | 'warning' | 'danger' }) {
@@ -25,8 +27,11 @@ function DetailBox({ label, value, variant = 'info' }: { label: string, value: s
   );
 }
 
-export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsModalProps) {
+export function BackupDetailsModal({ isOpen, onClose, backup, clients }: BackupDetailsModalProps) {
+  const navigate = useNavigate();
   if (!isOpen || !backup) return null;
+
+  const clientObj = clients?.find(c => c.name.toLowerCase() === backup.client.toLowerCase());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -55,7 +60,19 @@ export function BackupDetailsModal({ isOpen, onClose, backup }: BackupDetailsMod
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Cliente</p>
-                  <p className="text-sm font-semibold text-text-main">{backup.client}</p>
+                  {clientObj ? (
+                    <button 
+                      onClick={() => {
+                        navigate(`/cliente/${clientObj.id}`);
+                        onClose();
+                      }}
+                      className="text-sm font-semibold text-brand hover:underline cursor-pointer text-left transition-colors"
+                    >
+                      {backup.client}
+                    </button>
+                  ) : (
+                    <p className="text-sm font-semibold text-text-main">{backup.client}</p>
+                  )}
                 </div>
               </div>
 
