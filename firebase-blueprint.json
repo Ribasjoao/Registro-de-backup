@@ -154,6 +154,35 @@
         "timestamp": { "type": "string" }
       },
       "required": ["userId", "userName", "action", "details", "timestamp"]
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "A chronological action or event feed item.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientId": { "type": "string" },
+        "status": { "type": "string", "enum": ["success", "warning", "failed", "info"] },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "totalJobs": { "type": "number" },
+            "success": { "type": "number" },
+            "warning": { "type": "number" },
+            "failed": { "type": "number" },
+            "slaTime": { "type": "string" },
+            "milestoneDays": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userName", "action", "timestamp", "status"]
     }
   },
   "firestore": {
@@ -188,6 +217,10 @@
     "/audit_logs/{logId}": {
       "schema": "audit_log",
       "description": "Collection of audit trail events."
+    },
+    "/activities/{activityId}": {
+      "schema": "activity",
+      "description": "Collection of timeline activity events."
     }
   }
 }

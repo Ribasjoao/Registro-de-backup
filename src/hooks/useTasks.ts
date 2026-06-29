@@ -210,6 +210,28 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
 
         await awardXP(userId, xpAwarded, reason);
         toast.success(`+${xpAwarded} XP conquistados!`);
+
+        // Log real-time activity for resolved failure/critical tasks
+        if (task.priority === 'critical' || task.type === 'incidente') {
+          try {
+            const { logResolvedFailureActivity } = await import('../services/activityService');
+            // Calculate SLA time
+            const slaMs = new Date().getTime() - new Date(task.createdAt).getTime();
+            const hours = Math.floor(slaMs / 3600000);
+            const mins = Math.floor((slaMs % 3600000) / 60000);
+            const slaText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+            
+            await logResolvedFailureActivity(
+              userDisplayName || 'Técnico',
+              undefined,
+              task.relatedClient || 'Geral',
+              task.title,
+              slaText
+            );
+          } catch (actErr) {
+            console.error('Error logging resolved activity:', actErr);
+          }
+        }
       }
     } catch (error) {
       toast.error('Erro ao atualizar tarefa.');

@@ -130,3 +130,24 @@ export interface AuditLog {
   timestamp: string;
 }
 
+export interface Activity {
+  id: string;
+  userId?: string;
+  userName: string;
+  userPhoto?: string;
+  action: string;
+  details: string;
+  timestamp: string;
+  clientName?: string;
+  clientId?: string;
+  status: 'success' | 'warning' | 'failed' | 'info';
+  metadata?: {
+    totalJobs?: number;
+    success?: number;
+    warning?: number;
+    failed?: number;
+    slaTime?: string;
+    milestoneDays?: number;
+  };
+}
+

@@ -63,6 +63,18 @@ export function useUsers() {
           'CREATE_USER',
           `Criou o usuário: "${name}" (${email}) com o perfil ${role.toUpperCase()}`
         );
+
+        // Log real-time activity
+        try {
+          const { logNewTeamMemberActivity } = await import('../services/activityService');
+          await logNewTeamMemberActivity(
+            currentAdmin.displayName || currentAdmin.email || 'Admin',
+            undefined,
+            name
+          );
+        } catch (actErr) {
+          console.error('Error logging new team member activity:', actErr);
+        }
       }
 
       toast.success('Usuário criado com sucesso!', { id: toastId });

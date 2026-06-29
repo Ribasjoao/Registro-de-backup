@@ -163,6 +163,20 @@ service cloud.firestore {
              data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50;
     }
 
+    function isValidActivity(data) {
+      return hasOnlyAllowedFields(['userId', 'userName', 'userPhoto', 'action', 'details', 'timestamp', 'clientName', 'clientId', 'status', 'metadata']) &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 150 &&
+             data.action is string && data.action.size() > 0 && data.action.size() < 200 &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50 &&
+             data.status in ["success", "warning", "failed", "info"] &&
+             (!('userId' in data) || data.userId == null || (data.userId is string && data.userId.size() < 100)) &&
+             (!('userPhoto' in data) || data.userPhoto == null || (data.userPhoto is string && data.userPhoto.size() < 1000)) &&
+             (!('details' in data) || data.details == null || (data.details is string && data.details.size() < 2000)) &&
+             (!('clientName' in data) || data.clientName == null || (data.clientName is string && data.clientName.size() < 200)) &&
+             (!('clientId' in data) || data.clientId == null || (data.clientId is string && data.clientId.size() < 100)) &&
+             (!('metadata' in data) || data.metadata == null || data.metadata is map);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -232,6 +246,12 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
       allow delete, update: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidActivity(request.resource.data);
+      allow update, delete: if isAdmin();
     }
   }
 }

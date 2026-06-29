@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
@@ -25,7 +25,8 @@ import {
   Presentation,
   X,
   LayoutList,
-  Users
+  Users,
+  Clock
 } from 'lucide-react';
 import { cn } from './lib/utils';
 
@@ -39,6 +40,7 @@ const TaskCenter = lazy(() => import('./components/TaskCenter/TaskCenter').then(
 const WeeklyExecutiveView = lazy(() => import('./components/WeeklyExecutiveView').then(m => ({ default: m.WeeklyExecutiveView })));
 const ClientsListView = lazy(() => import('./components/ClientsListView').then(m => ({ default: m.ClientsListView })));
 const ClientDashboardView = lazy(() => import('./components/ClientDashboardView').then(m => ({ default: m.ClientDashboardView })));
+const TimelineView = lazy(() => import('./components/TimelineView').then(m => ({ default: m.TimelineView })));
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { LiquidMetalButton } from './components/LiquidMetal';
@@ -68,10 +70,10 @@ import {
   User
 } from './firebase';
 import { useTasks } from './hooks/useTasks';
-import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task } from './types';
+import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task, Activity } from './types';
 import { logAction } from './services/auditService';
 
-type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings';
+type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings' | 'timeline';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -98,13 +100,30 @@ export default function App() {
     clients: false,
     destinations: false,
     backupTypes: false,
-    users: false
+    users: false,
+    activities: false
   });
 
   const [clients, setClients] = useState<Client[]>([]);
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [destinations, setDestinations] = useState<StorageDestination[]>([]);
   const [backupTypes, setBackupTypes] = useState<BackupType[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  
+  const [lastViewedActivities, setLastViewedActivities] = useState<string>(() => {
+    return localStorage.getItem('lastViewedActivities') || new Date(0).toISOString();
+  });
+
+  const markActivitiesAsRead = () => {
+    const now = new Date().toISOString();
+    setLastViewedActivities(now);
+    localStorage.setItem('lastViewedActivities', now);
+  };
+
+  const unreadActivitiesCount = useMemo(() => {
+    return activities.filter(act => act.timestamp > lastViewedActivities).length;
+  }, [activities, lastViewedActivities]);
+
   const {
     tasks,
     loading: tasksLoading,
@@ -117,7 +136,7 @@ export default function App() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [editingBackup, setEditingBackup] = useState<BackupRecord | undefined>(undefined);
 
-  const isLoadingData = !loadedStates.backups || !loadedStates.clients || !loadedStates.destinations || !loadedStates.backupTypes || !loadedStates.users || tasksLoading;
+  const isLoadingData = !loadedStates.backups || !loadedStates.clients || !loadedStates.destinations || !loadedStates.backupTypes || !loadedStates.users || !loadedStates.activities || tasksLoading;
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
@@ -345,6 +364,17 @@ export default function App() {
       handleFirestoreError(error, OperationType.LIST, 'users');
     });
 
+    // Listen to Activities
+    const qActivities = query(collection(db, 'activities'), orderBy('timestamp', 'desc'), limit(200));
+    const unsubscribeActivities = onSnapshot(qActivities, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+      setActivities(data);
+      setLoadedStates(prev => ({ ...prev, activities: true }));
+    }, (error) => {
+      setLoadedStates(prev => ({ ...prev, activities: true }));
+      handleFirestoreError(error, OperationType.LIST, 'activities');
+    });
+
     return () => {
       unsubscribeUser();
       unsubscribeBackups();
@@ -352,8 +382,20 @@ export default function App() {
       unsubscribeDestinations();
       unsubscribeBackupTypes();
       unsubscribeUsers();
+      unsubscribeActivities();
     };
   }, [user?.uid]);
+
+  // Trigger seeding of activities if empty
+  useEffect(() => {
+    if (loadedStates.backups && loadedStates.clients && loadedStates.users && loadedStates.activities) {
+      if (activities.length === 0 && backups.length > 0) {
+        import('./services/activityService').then(({ seedActivitiesIfEmpty }) => {
+          seedActivitiesIfEmpty(backups, clients, users);
+        });
+      }
+    }
+  }, [loadedStates.backups, loadedStates.clients, loadedStates.users, loadedStates.activities, activities.length, backups, clients, users]);
 
   const addClient = async (name: string) => {
     if (!effectiveIsAdmin) return;
@@ -370,6 +412,14 @@ export default function App() {
           appUser?.displayName || user.displayName || user.email || 'Admin',
           'CREATE_CLIENT',
           `Adicionou o cliente "${name}"`
+        );
+
+        // Log real-time activity
+        const { logNewClientActivity } = await import('./services/activityService');
+        await logNewClientActivity(
+          appUser?.displayName || user.displayName || user.email || 'Admin',
+          appUser?.photoURL || user.photoURL || undefined,
+          name
         );
       }
     } catch (error) {
@@ -434,6 +484,18 @@ export default function App() {
           appUser?.displayName || user.displayName || user.email || 'Usuário',
           'CREATE_BACKUP',
           `Registrou backup "${backup.title}" para o cliente "${backup.client}" (${backup.status.toUpperCase()})`
+        );
+
+        // Log real-time activity
+        const { logBackupAuditActivity } = await import('./services/activityService');
+        await logBackupAuditActivity(
+          appUser?.displayName || user.displayName || user.email || 'Usuário',
+          appUser?.photoURL || user.photoURL || undefined,
+          backup.client,
+          1,
+          backup.status === 'success' ? 1 : 0,
+          backup.status === 'warning' ? 1 : 0,
+          backup.status === 'failed' ? 1 : 0
         );
       }
 
@@ -741,6 +803,23 @@ export default function App() {
               'CREATE_BACKUP_BATCH',
               `Registrou lote de ${backupData.length} backups para o cliente "${backupData[0].client}"`
             );
+
+            // Log real-time activity
+            const { logBackupAuditActivity } = await import('./services/activityService');
+            const total = backupData.length;
+            const success = backupData.filter(b => b.status === 'success').length;
+            const warning = backupData.filter(b => b.status === 'warning').length;
+            const failed = backupData.filter(b => b.status === 'failed').length;
+            const clientName = backupData[0]?.client || 'Geral';
+            await logBackupAuditActivity(
+              appUser?.displayName || user.displayName || user.email || 'Usuário',
+              appUser?.photoURL || user.photoURL || undefined,
+              clientName,
+              total,
+              success,
+              warning,
+              failed
+            );
           }
         } catch (error) {
           toast.error('Erro ao registrar lote de backups.', { id: toastId });
@@ -786,6 +865,7 @@ export default function App() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'weekly', label: 'Resumo Semanal', icon: Presentation, path: '/semanal' },
+    { id: 'timeline', label: 'Atividades', icon: Clock, path: '/timeline' },
     { id: 'records', label: 'Registros', icon: ListTodo, path: '/registros' },
     { id: 'clients', label: 'Clientes', icon: Users, path: '/clientes' },
     { id: 'tasks', label: 'Tarefas', icon: LayoutList, path: '/tarefas' },
@@ -839,7 +919,12 @@ export default function App() {
                     )}
                   >
                     <item.icon className="w-5 h-5" />
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm flex-grow text-left">{item.label}</span>
+                    {item.id === 'timeline' && unreadActivitiesCount > 0 && (
+                      <span className="bg-danger text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full min-w-[20px] text-center shrink-0">
+                        {unreadActivitiesCount}
+                      </span>
+                    )}
                   </motion.button>
                 );
               })}
@@ -991,6 +1076,14 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardView backups={backups} clients={clients} isPresentationMode={isPresentationMode} isLoading={isLoadingData} />} />
                 <Route path="/semanal" element={<WeeklyExecutiveView backups={backups} tasks={tasks} isLoading={isLoadingData} />} />
+                <Route path="/timeline" element={
+                  <TimelineView 
+                    activities={activities} 
+                    clients={clients} 
+                    onMarkAsRead={markActivitiesAsRead} 
+                    isLoading={isLoadingData} 
+                  />
+                } />
                 <Route path="/registros" element={<RecordsView backups={backups} clients={clients} onEdit={effectiveIsEditor ? openEditBackup : undefined} onDelete={effectiveIsEditor ? deleteBackup : undefined} isLoading={isLoadingData} />} />
                 <Route path="/tarefas" element={
                   <TaskCenter 
