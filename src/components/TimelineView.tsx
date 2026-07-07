@@ -99,11 +99,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Mark all as read when view mounts
-  useEffect(() => {
-    onMarkAsRead();
-  }, [onMarkAsRead, activities.length]);
-
   // Match client name to find client ID for linking
   const getClientLink = (clientName?: string) => {
     if (!clientName) return null;
@@ -216,7 +211,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             <Clock className="w-7 h-7 text-brand" /> Timeline de Atividades
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Feed operacional cronológico em tempo real da infraestrutura Gate7.
+            Feed operacional cronológico em tempo real do Registro de Backup.
           </p>
         </div>
 
@@ -284,7 +279,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-text-main text-sm sm:text-base">
-                          {activity.userName || 'Sistema Gate7'}
+                          {activity.userName || 'Sistema Registro de Backup'}
                         </span>
                         <span className="text-xs sm:text-sm text-text-secondary font-medium">
                           {activity.action}

@@ -174,7 +174,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </h1>
               <p className="text-xs text-text-secondary font-bold uppercase tracking-widest mt-1.5 flex items-center justify-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-brand" />
-                Gate7 Shield • Modo de Recuperação
+                Shield do Registro de Backup • Modo de Recuperação
               </p>
 
               {/* Minimalist Divider Line */}
@@ -183,9 +183,9 @@ export class ErrorBoundary extends Component<Props, State> {
               {/* Explanatory Message context-aware */}
               <p className="text-sm font-medium text-text-main leading-relaxed px-2">
                 {isChunk ? (
-                  'Uma nova versão do Gate7 foi implantada! Para garantir a segurança e integridade das conexões de infraestrutura, os arquivos do sistema precisam ser sincronizados.'
+                  'Uma nova versão do Registro de Backup foi implantada! Para garantir a segurança e integridade das conexões de infraestrutura, os arquivos do sistema precisam ser sincronizados.'
                 ) : (
-                  'Ocorreu uma falha inesperada durante a renderização de um componente operacional do Gate7.'
+                  'Ocorreu uma falha inesperada durante a renderização de um componente operacional do Registro de Backup.'
                 )}
               </p>
 
@@ -227,7 +227,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
               {/* Brand Footer */}
               <p className="text-[10px] text-text-secondary/60 mt-8 font-mono tracking-widest flex items-center justify-center gap-1 select-none">
-                <Sparkles className="w-3 h-3 text-brand" /> GATE7 ENGINEERING SYSTEM
+                <Sparkles className="w-3 h-3 text-brand" /> REGISTRO DE BACKUP SYSTEM
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   collection, 
   query, 
@@ -21,6 +21,12 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const { awardXP } = useGamification();
+  const generatingTemplatesRef = useRef<Set<string>>(new Set());
+
+  // Reset generatingTemplatesRef when user changes
+  useEffect(() => {
+    generatingTemplatesRef.current = new Set();
+  }, [userId]);
 
   // Listen to Tasks
   useEffect(() => {
@@ -30,7 +36,19 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
       return;
     }
 
-    setLoading(true);
+    // Load initial tasks from cache if present
+    try {
+      const cached = localStorage.getItem(`registro_backup_cache_tasks_${userId}`);
+      if (cached) {
+        setTasks(JSON.parse(cached));
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    } catch {
+      setLoading(true);
+    }
+
     const qTasks = query(collection(db, 'tasks'), where('userId', '==', userId));
     const unsubscribeTasks = onSnapshot(
       qTasks,
@@ -39,6 +57,7 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
         // Sort using ISO 8601 strings
         data.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         setTasks(data);
+        localStorage.setItem(`registro_backup_cache_tasks_${userId}`, JSON.stringify(data));
         setLoading(false);
       },
       (error) => {
@@ -65,10 +84,12 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
             exist.source === 'manual'
         );
         
-        if (template) {
+        if (template && !generatingTemplatesRef.current.has(template.id)) {
+          generatingTemplatesRef.current.add(template.id);
           try {
+            const todayStr = new Date().toISOString().split('T')[0];
             await updateDoc(doc(db, 'tasks', template.id), {
-              'recurrence.lastGenerated': new Date().toISOString().split('T')[0],
+              'recurrence.lastGenerated': todayStr,
               updatedAt: new Date().toISOString()
             });
             
@@ -80,6 +101,7 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
             });
           } catch (err) {
             console.error('Error generating recurrent task instance:', err);
+            generatingTemplatesRef.current.delete(template.id);
           }
         }
       });

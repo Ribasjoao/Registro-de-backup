@@ -108,7 +108,7 @@ export async function logMilestoneActivity(
   details: string
 ): Promise<void> {
   await logActivity({
-    userName: 'Sistema Gate7',
+    userName: 'Sistema Registro de Backup',
     action: 'marco do sistema',
     details,
     status: 'success',
@@ -132,7 +132,7 @@ export async function seedActivitiesIfEmpty(
     // Seed Clients
     for (const cl of existingClients.slice(0, 5)) {
       await logNewClientActivity(
-        'Sistema Gate7',
+        'Sistema Registro de Backup',
         undefined,
         cl.name,
         cl.id

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, Suspense, lazy, useMemo } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useMemo, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,17 +30,16 @@ import {
 } from 'lucide-react';
 import { cn } from './lib/utils';
 
-// Lazy load views for improved performance (code splitting)
-const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
-const RecordsView = lazy(() => import('./components/RecordsView').then(m => ({ default: m.RecordsView })));
-const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
-const DestinationsView = lazy(() => import('./components/DestinationsView').then(m => ({ default: m.DestinationsView })));
-const ReportsView = lazy(() => import('./components/ReportsView').then(m => ({ default: m.ReportsView })));
-const TaskCenter = lazy(() => import('./components/TaskCenter/TaskCenter').then(m => ({ default: m.TaskCenter })));
-const WeeklyExecutiveView = lazy(() => import('./components/WeeklyExecutiveView').then(m => ({ default: m.WeeklyExecutiveView })));
-const ClientsListView = lazy(() => import('./components/ClientsListView').then(m => ({ default: m.ClientsListView })));
-const ClientDashboardView = lazy(() => import('./components/ClientDashboardView').then(m => ({ default: m.ClientDashboardView })));
-const TimelineView = lazy(() => import('./components/TimelineView').then(m => ({ default: m.TimelineView })));
+import { DashboardView } from './components/DashboardView';
+import { RecordsView } from './components/RecordsView';
+import { SettingsView } from './components/SettingsView';
+import { DestinationsView } from './components/DestinationsView';
+import { ReportsView } from './components/ReportsView';
+import { TaskCenter } from './components/TaskCenter/TaskCenter';
+import { WeeklyExecutiveView } from './components/WeeklyExecutiveView';
+import { ClientsListView } from './components/ClientsListView';
+import { ClientDashboardView } from './components/ClientDashboardView';
+import { TimelineView } from './components/TimelineView';
 import { PresentationCarousel } from './components/PresentationCarousel';
 import { RegisterBackupModal } from './components/RegisterBackupModal';
 import { LiquidMetalButton } from './components/LiquidMetal';
@@ -73,6 +72,29 @@ import { useTasks } from './hooks/useTasks';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task, Activity } from './types';
 import { logAction } from './services/auditService';
 
+// Migrate old 'gate7_cache_*' keys to 'registro_backup_cache_*'
+(() => {
+  try {
+    const keysToMigrate: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('gate7_cache_')) {
+        keysToMigrate.push(key);
+      }
+    }
+    keysToMigrate.forEach(key => {
+      const val = localStorage.getItem(key);
+      if (val !== null) {
+        const newKey = key.replace('gate7_cache_', 'registro_backup_cache_');
+        localStorage.setItem(newKey, val);
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    console.error('Error migrating cache keys:', e);
+  }
+})();
+
 type View = 'dashboard' | 'records' | 'tasks' | 'destinations' | 'reports' | 'weekly' | 'settings' | 'timeline';
 
 export default function App() {
@@ -89,40 +111,95 @@ export default function App() {
   const effectiveIsEditor = isRootUser || isEditor;
 
   const hasGeneratedToday = useRef(false);
+  const isSeedingRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   
-  const [loadedStates, setLoadedStates] = useState({
-    backups: false,
-    clients: false,
-    destinations: false,
-    backupTypes: false,
-    users: false,
-    activities: false
+  const [loadedStates, setLoadedStates] = useState(() => {
+    const hasBackups = !!localStorage.getItem('registro_backup_cache_backups');
+    const hasClients = !!localStorage.getItem('registro_backup_cache_clients');
+    const hasDestinations = !!localStorage.getItem('registro_backup_cache_destinations');
+    const hasBackupTypes = !!localStorage.getItem('registro_backup_cache_backup_types');
+    const hasUsers = !!localStorage.getItem('registro_backup_cache_users');
+    const hasActivities = !!localStorage.getItem('registro_backup_cache_activities');
+    
+    return {
+      backups: hasBackups,
+      clients: hasClients,
+      destinations: hasDestinations,
+      backupTypes: hasBackupTypes,
+      users: hasUsers,
+      activities: hasActivities
+    };
   });
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [backups, setBackups] = useState<BackupRecord[]>([]);
-  const [destinations, setDestinations] = useState<StorageDestination[]>([]);
-  const [backupTypes, setBackupTypes] = useState<BackupType[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [clients, setClients] = useState<Client[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_clients');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [backups, setBackups] = useState<BackupRecord[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_backups');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [destinations, setDestinations] = useState<StorageDestination[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_destinations');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [backupTypes, setBackupTypes] = useState<BackupType[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_backup_types');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [activities, setActivities] = useState<Activity[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_activities');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   
   const [lastViewedActivities, setLastViewedActivities] = useState<string>(() => {
     return localStorage.getItem('lastViewedActivities') || new Date(0).toISOString();
   });
 
-  const markActivitiesAsRead = () => {
+  const markActivitiesAsRead = useCallback(() => {
     const now = new Date().toISOString();
     setLastViewedActivities(now);
     localStorage.setItem('lastViewedActivities', now);
-  };
+  }, []);
 
   const unreadActivitiesCount = useMemo(() => {
     return activities.filter(act => act.timestamp > lastViewedActivities).length;
   }, [activities, lastViewedActivities]);
+
+  useEffect(() => {
+    if (location.pathname === '/timeline') {
+      markActivitiesAsRead();
+    }
+  }, [location.pathname, markActivitiesAsRead]);
 
   const {
     tasks,
@@ -133,7 +210,14 @@ export default function App() {
     toggleTask,
     toggleImportant
   } = useTasks(user?.uid ?? undefined, user?.displayName || user?.email);
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<AppUser[]>(() => {
+    try {
+      const cached = localStorage.getItem('registro_backup_cache_users');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [editingBackup, setEditingBackup] = useState<BackupRecord | undefined>(undefined);
 
   const isLoadingData = !loadedStates.backups || !loadedStates.clients || !loadedStates.destinations || !loadedStates.backupTypes || !loadedStates.users || !loadedStates.activities || tasksLoading;
@@ -313,6 +397,7 @@ export default function App() {
     const unsubscribeBackups = onSnapshot(qBackups, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BackupRecord));
       setBackups(data);
+      localStorage.setItem('registro_backup_cache_backups', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, backups: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, backups: true }));
@@ -324,6 +409,7 @@ export default function App() {
     const unsubscribeClients = onSnapshot(qClients, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
       setClients(data);
+      localStorage.setItem('registro_backup_cache_clients', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, clients: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, clients: true }));
@@ -335,6 +421,7 @@ export default function App() {
     const unsubscribeDestinations = onSnapshot(qDestinations, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StorageDestination));
       setDestinations(data);
+      localStorage.setItem('registro_backup_cache_destinations', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, destinations: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, destinations: true }));
@@ -346,6 +433,7 @@ export default function App() {
     const unsubscribeBackupTypes = onSnapshot(qBackupTypes, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BackupType));
       setBackupTypes(data);
+      localStorage.setItem('registro_backup_cache_backup_types', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, backupTypes: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, backupTypes: true }));
@@ -358,6 +446,7 @@ export default function App() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
       data.sort((a, b) => (b.xp || 0) - (a.xp || 0));
       setUsers(data);
+      localStorage.setItem('registro_backup_cache_users', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, users: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, users: true }));
@@ -369,6 +458,7 @@ export default function App() {
     const unsubscribeActivities = onSnapshot(qActivities, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
       setActivities(data);
+      localStorage.setItem('registro_backup_cache_activities', JSON.stringify(data));
       setLoadedStates(prev => ({ ...prev, activities: true }));
     }, (error) => {
       setLoadedStates(prev => ({ ...prev, activities: true }));
@@ -389,7 +479,8 @@ export default function App() {
   // Trigger seeding of activities if empty
   useEffect(() => {
     if (loadedStates.backups && loadedStates.clients && loadedStates.users && loadedStates.activities) {
-      if (activities.length === 0 && backups.length > 0) {
+      if (activities.length === 0 && backups.length > 0 && !isSeedingRef.current) {
+        isSeedingRef.current = true;
         import('./services/activityService').then(({ seedActivitiesIfEmpty }) => {
           seedActivitiesIfEmpty(backups, clients, users);
         });
