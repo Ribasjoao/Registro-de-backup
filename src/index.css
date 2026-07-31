@@ -57,25 +57,25 @@
   }
 
   .dark {
-    --color-bg-main: #0B0F19;
-    --color-bg-card: rgba(17, 24, 39, 0.45);
-    --color-bg-sidebar: #0F1524;
+    --color-bg-main: #0A0718;
+    --color-bg-card: #130F26;
+    --color-bg-sidebar: #070512;
     
-    --color-text-main: #F9FAFB;
-    --color-text-secondary: #9CA3AF;
+    --color-text-main: #FFFFFF;
+    --color-text-secondary: #928EA8;
     
-    --color-border-main: rgba(255, 255, 255, 0.08); /* super subtle grid style border */
-    --color-border-card: rgba(255, 255, 255, 0.05);
+    --color-border-main: #231C42;
+    --color-border-card: #2B234F;
     
-    --color-brand: #8b5cf6;
-    --color-brand-light: rgba(139, 92, 246, 0.1);
-    --color-brand-dark: #a78bfa;
+    --color-brand: #6B42F2;
+    --color-brand-light: rgba(107, 66, 242, 0.15);
+    --color-brand-dark: #8B5CF6;
     
-    --color-success: #10B981; /* Verde Esmeralda GP05 */
-    --color-warning: #F59E0B; /* Amarelo Amber GP05 */
-    --color-danger: #F43F5E;  /* Vermelho Rose GP05 vibrant */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-danger: #FF2A85;
     
-    --shadow-card: none;
+    --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
 
     /* Semantic Aliases */
     --color-surface: var(--color-bg-card);
@@ -90,28 +90,28 @@
 
 @layer components {
   .card {
-    @apply bg-bg-card/75 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 border border-border-main/20 relative;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.02), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+    @apply bg-bg-card/90 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 border border-border-main relative;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   }
   
   .card:hover {
-    @apply shadow-xl border-brand/25;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06), 0 0 20px rgba(139, 92, 246, 0.06);
+    @apply border-brand/40 shadow-2xl;
+    box-shadow: 0 15px 35px -10px rgba(107, 66, 242, 0.2);
     transform: translateY(-2px);
   }
 
   .dark .card {
-    @apply bg-bg-card/45 backdrop-blur-md border-white/5;
-    box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.5);
+    @apply bg-[#130F26]/95 backdrop-blur-xl border-[#231C42];
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7);
   }
   
   .dark .card:hover {
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px rgba(139, 92, 246, 0.12);
-    @apply border-brand/35;
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(107, 66, 242, 0.25);
+    @apply border-[#6B42F2]/60;
   }
   
   .sidebar {
-    @apply bg-bg-sidebar border-r border-border-main/50 transition-colors duration-200;
+    @apply bg-bg-sidebar border-r border-border-main transition-colors duration-200;
   }
 }
 

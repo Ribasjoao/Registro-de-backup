@@ -84,13 +84,6 @@ const EmptyWeeklyState = () => (
 );
 
 export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ backups, tasks, isLoading = false }: WeeklyExecutiveViewProps) {
-  if (isLoading) {
-    return <WeeklySkeleton />;
-  }
-
-  if (backups.length === 0) {
-    return <EmptyWeeklyState />;
-  }
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -293,6 +286,14 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
+
+  if (isLoading) {
+    return <WeeklySkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyWeeklyState />;
+  }
 
   return (
     <div 

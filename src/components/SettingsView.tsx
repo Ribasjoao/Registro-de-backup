@@ -150,9 +150,6 @@ export const SettingsView = React.memo(function SettingsView({
   isLoading = false,
   onResetData
 }: SettingsViewProps) {
-  if (isLoading) {
-    return <SettingsSkeleton />;
-  }
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [newClientName, setNewClientName] = useState('');
   const [newBackupTypeName, setNewBackupTypeName] = useState('');
@@ -1326,6 +1323,10 @@ export const SettingsView = React.memo(function SettingsView({
         );
     }
   };
+
+  if (isLoading) {
+    return <SettingsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">

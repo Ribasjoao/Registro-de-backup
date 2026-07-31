@@ -953,10 +953,13 @@ export default function App() {
     return <Login />;
   }
 
-  const navItems = [
+  const mainNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'weekly', label: 'Resumo Semanal', icon: Presentation, path: '/semanal' },
     { id: 'timeline', label: 'Atividades', icon: Clock, path: '/timeline' },
+  ];
+
+  const managementNavItems = [
     { id: 'records', label: 'Registros', icon: ListTodo, path: '/registros' },
     { id: 'clients', label: 'Clientes', icon: Users, path: '/clientes' },
     { id: 'tasks', label: 'Tarefas', icon: LayoutList, path: '/tarefas' },
@@ -964,6 +967,8 @@ export default function App() {
     { id: 'reports', label: 'Relatórios IA', icon: Sparkles, path: '/relatorios' },
     ...(effectiveIsAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings, path: '/configuracoes' }] : []),
   ];
+
+  const navItems = [...mainNavItems, ...managementNavItems];
 
   return (
     <div className={cn(
@@ -979,52 +984,118 @@ export default function App() {
       <AnimatePresence mode="wait">
         {!isPresentationMode && (
           <motion.aside 
-            initial={{ width: 0, opacity: 0, x: -240 }}
-            animate={{ width: 240, opacity: 1, x: 0 }}
-            exit={{ width: 0, opacity: 0, x: -240 }}
+            initial={{ width: 0, opacity: 0, x: -250 }}
+            animate={{ width: 250, opacity: 1, x: 0 }}
+            exit={{ width: 0, opacity: 0, x: -250 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="w-[240px] sidebar flex-shrink-0 flex flex-col h-full hidden md:flex overflow-hidden"
+            className="w-[250px] sidebar flex-shrink-0 flex flex-col h-full hidden md:flex overflow-hidden bg-[#070512] border-r border-[#231C42]"
           >
-            <div className="h-20 flex items-center px-6 border-b border-border-main shrink-0">
+            {/* Header / Brand */}
+            <div className="h-20 flex items-center px-6 border-b border-[#231C42] shrink-0 justify-between">
               <div className="flex items-center gap-3">
-                <DotMatrixLoader pattern="dynamic" color="petal-shimmer" size="logo" />
-                <span className="font-heading font-bold text-lg tracking-tight text-text-main">Dashboard</span>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6B42F2] to-[#8B5CF6] flex items-center justify-center text-white shadow-[0_0_15px_rgba(107,66,242,0.5)]">
+                  <ShieldCheck className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-heading font-extrabold text-base tracking-tight text-white leading-tight">Registro Backup</span>
+                  <span className="text-[10px] text-[#928EA8] font-medium tracking-wider uppercase">Sistemas & Audit</span>
+                </div>
               </div>
             </div>
             
-            <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
-                return (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.02, x: 2 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    onClick={() => navigate(item.path)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all border-l-4 cursor-pointer",
-                      isActive 
-                        ? "bg-brand/10 text-brand border-brand font-semibold" 
-                        : "text-text-secondary hover:bg-bg-main hover:text-text-main border-transparent font-medium"
-                    )}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-sm flex-grow text-left">{item.label}</span>
-                    {item.id === 'timeline' && unreadActivitiesCount > 0 && (
-                      <span className="bg-danger text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full min-w-[20px] text-center shrink-0">
-                        {unreadActivitiesCount}
-                      </span>
-                    )}
-                  </motion.button>
-                );
-              })}
+            {/* Nav Menu */}
+            <nav className="flex-1 py-5 px-3.5 space-y-6 overflow-y-auto custom-fine-scrollbar">
+              {/* Group 1: Principal */}
+              <div>
+                <p className="px-3 mb-2 text-[11px] font-bold tracking-wider text-[#928EA8]/70 uppercase">
+                  Principal
+                </p>
+                <div className="space-y-1">
+                  {mainNavItems.map((item) => {
+                    const isActive = location.pathname === item.path || (item.id === 'dashboard' && location.pathname === '/');
+                    return (
+                      <motion.button
+                        key={item.id}
+                        whileHover={{ scale: 1.01, x: 2 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        onClick={() => navigate(item.path)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer font-medium text-sm",
+                          isActive 
+                            ? "bg-gradient-to-r from-[#6B42F2] to-[#8B5CF6] text-white font-bold shadow-[0_4px_20px_rgba(107,66,242,0.45)]" 
+                            : "text-[#928EA8] hover:bg-[#130F26] hover:text-white"
+                        )}
+                      >
+                        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-[#928EA8]")} />
+                        <span className="flex-grow text-left">{item.label}</span>
+                        {item.id === 'timeline' && unreadActivitiesCount > 0 && (
+                          <span className="bg-[#FF2A85] text-white text-[10px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center shrink-0">
+                            {unreadActivitiesCount}
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Group 2: Gestão */}
+              <div>
+                <p className="px-3 mb-2 text-[11px] font-bold tracking-wider text-[#928EA8]/70 uppercase">
+                  Gestão & Auditoria
+                </p>
+                <div className="space-y-1">
+                  {managementNavItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <motion.button
+                        key={item.id}
+                        whileHover={{ scale: 1.01, x: 2 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        onClick={() => navigate(item.path)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all cursor-pointer font-medium text-sm",
+                          isActive 
+                            ? "bg-gradient-to-r from-[#6B42F2] to-[#8B5CF6] text-white font-bold shadow-[0_4px_20px_rgba(107,66,242,0.45)]" 
+                            : "text-[#928EA8] hover:bg-[#130F26] hover:text-white"
+                        )}
+                      >
+                        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-[#928EA8]")} />
+                        <span className="flex-grow text-left">{item.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
             </nav>
 
-            <div className="p-4 border-t border-border-main shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-white overflow-hidden select-none">
+            {/* Support Box Widget */}
+            <div className="px-3.5 pb-3 shrink-0">
+              <div className="bg-[#130F26] border border-[#231C42] rounded-2xl p-3.5 text-xs relative overflow-hidden">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#6B42F2]" /> Precisa de Suporte?
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#928EA8] leading-tight">
+                  Contate nossos especialistas de infraestrutura em caso de emergência.
+                </p>
+                <button 
+                  onClick={() => toast.success("Central de Suporte Notificada! Em breve entraremos em contato.")}
+                  className="mt-3 w-full bg-[#201844] hover:bg-[#6B42F2] text-white font-extrabold py-2 px-3 rounded-xl transition-all text-xs border border-[#322860] hover:border-[#6B42F2] shadow-sm cursor-pointer"
+                >
+                  Contatar Suporte
+                </button>
+              </div>
+            </div>
+
+            {/* User Profile Bar */}
+            <div className="p-3.5 border-t border-[#231C42] shrink-0">
+              <div className="bg-[#130F26] border border-[#231C42] rounded-xl p-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6B42F2] to-[#8B5CF6] flex items-center justify-center text-xs font-black text-white overflow-hidden shrink-0">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" />
                     ) : (
@@ -1035,20 +1106,18 @@ export default function App() {
                     )}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-medium text-text-main truncate">{user.displayName || 'Usuário'}</span>
-                    <span className="text-xs text-brand truncate flex items-center gap-1 uppercase tracking-wider font-semibold">
-                      {displayRole === 'admin' ? 'Administrador' : displayRole === 'editor' ? 'Editor' : 'Visualizador'}
-                    </span>
+                    <span className="text-xs font-bold text-white truncate">{user.displayName || 'Operador'}</span>
+                    <span className="text-[10px] text-[#928EA8] truncate">{user.email}</span>
                   </div>
                 </div>
+                <button 
+                  onClick={handleLogout}
+                  title="Sair do sistema"
+                  className="p-1.5 text-[#928EA8] hover:text-white hover:bg-[#201844] rounded-lg transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:bg-bg-main hover:text-text-main transition-all text-sm font-medium"
-              >
-                <LogOut className="w-4 h-4" />
-                Sair
-              </button>
             </div>
           </motion.aside>
         )}
@@ -1068,7 +1137,7 @@ export default function App() {
             >
               <button 
                 onClick={togglePresentationMode}
-                className="flex items-center gap-3 px-6 py-4 bg-bg-card/75 hover:bg-brand hover:text-white text-text-main rounded-2xl backdrop-blur-xl border border-white/20 dark:border-white/5 transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_50px_rgba(124,58,237,0.3)] group cursor-pointer font-black text-xs uppercase tracking-wider focus:outline-none"
+                className="flex items-center gap-3 px-6 py-4 bg-[#130F26]/90 hover:bg-[#6B42F2] hover:text-white text-white rounded-2xl backdrop-blur-xl border border-[#231C42] transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group cursor-pointer font-black text-xs uppercase tracking-wider focus:outline-none"
                 title="Sair do Modo de Reunião (ESC)"
               >
                 <X className="w-5 h-5 group-hover:rotate-95 transition-transform duration-300" />
@@ -1086,27 +1155,31 @@ export default function App() {
               animate={{ height: 80, opacity: 1, y: 0 }}
               exit={{ height: 0, opacity: 0, y: -80 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              className="h-20 bg-bg-card border-b border-border-main flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10 overflow-hidden"
+              className="h-20 bg-[#0A0718]/80 backdrop-blur-md border-b border-[#231C42] flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10 overflow-hidden"
             >
-              <div>
-                <h1 className="font-heading text-2xl font-bold text-text-main">
+              <div className="flex items-center gap-4">
+                <h1 className="font-heading text-xl font-black text-white tracking-tight">
                   {location.pathname.startsWith('/cliente/') 
                     ? 'Dashboard do Cliente' 
                     : (navItems.find(i => i.path === location.pathname || (i.id === 'dashboard' && location.pathname === '/'))?.label || 'Dashboard')}
                 </h1>
+                <div className="hidden lg:flex items-center gap-2 bg-[#130F26] border border-[#231C42] text-[11px] font-mono text-[#928EA8] px-3 py-1 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+                  <span>ID do Sistema: <strong className="text-white">RB0000488</strong></span>
+                </div>
               </div>
               
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <motion.button 
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 15 }}
                   onClick={togglePresentationMode}
-                  className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-brand transition-all rounded-lg hover:bg-brand/5 font-medium border border-transparent hover:border-brand/20 cursor-pointer"
+                  className="flex items-center gap-2 px-3.5 py-2 text-[#928EA8] hover:text-white bg-[#130F26] hover:bg-[#201844] transition-all rounded-xl font-bold text-xs border border-[#231C42] hover:border-[#6B42F2] cursor-pointer"
                   title="Iniciar Reunião de Diretoria"
                 >
-                  <Presentation className="w-5 h-5" />
-                  <span className="hidden sm:inline text-sm">Iniciar Reunião</span>
+                  <Presentation className="w-4 h-4 text-[#6B42F2]" />
+                  <span className="hidden sm:inline">Modo Reunião</span>
                 </motion.button>
                 
                 <motion.button 
@@ -1114,29 +1187,32 @@ export default function App() {
                   whileTap={{ scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 400, damping: 15 }}
                   onClick={toggleDarkMode}
-                  className="p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
+                  className="p-2.5 bg-[#130F26] border border-[#231C42] text-[#928EA8] hover:text-white hover:border-[#6B42F2] transition-colors rounded-xl cursor-pointer"
                   title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
                 >
-                  {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  {isDarkMode ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#6B42F2]" />}
                 </motion.button>
+                
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                  className="relative p-2 text-text-secondary hover:text-text-main transition-colors rounded-full hover:bg-bg-main cursor-pointer"
+                  className="relative p-2.5 bg-[#130F26] border border-[#231C42] text-[#928EA8] hover:text-white hover:border-[#6B42F2] transition-colors rounded-xl cursor-pointer"
                 >
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-bg-card"></span>
+                  <Bell className="w-4 h-4" />
+                  {unreadActivitiesCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF2A85] rounded-full ring-2 ring-[#0A0718]"></span>
+                  )}
                 </motion.button>
+
                 {effectiveIsEditor && (
-                  <LiquidMetalButton 
+                  <button 
                     onClick={() => setIsModalOpen(true)}
-                    preset="holo"
-                    className="px-5 py-2.5 rounded-lg active:scale-95 flex items-center gap-2 text-xs font-black uppercase tracking-widest cursor-pointer shadow-md select-none"
+                    className="px-4 py-2.5 bg-gradient-to-r from-[#6B42F2] to-[#8B5CF6] hover:from-[#7C3AED] hover:to-[#9333EA] text-white rounded-xl active:scale-95 flex items-center gap-2 text-xs font-black uppercase tracking-wider cursor-pointer shadow-[0_4px_20px_rgba(107,66,242,0.4)] transition-all select-none"
                   >
-                    <Plus className="w-5 h-5 font-black" />
+                    <Plus className="w-4 h-4 font-black" />
                     Registrar Backup
-                  </LiquidMetalButton>
+                  </button>
                 )}
               </div>
             </motion.header>

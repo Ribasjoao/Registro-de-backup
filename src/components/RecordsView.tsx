@@ -76,13 +76,6 @@ const EmptyRecordsState = () => (
 
 export const RecordsView = React.memo(function RecordsView({ backups, clients, onEdit, onDelete, isLoading = false }: RecordsViewProps) {
   const navigate = useNavigate();
-  if (isLoading) {
-    return <RecordsSkeleton />;
-  }
-
-  if (backups.length === 0) {
-    return <EmptyRecordsState />;
-  }
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'week' | 'month' | 'all'>('month');
@@ -276,6 +269,14 @@ export const RecordsView = React.memo(function RecordsView({ backups, clients, o
       </td>
     </tr>
   );
+
+  if (isLoading) {
+    return <RecordsSkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyRecordsState />;
+  }
 
   return (
     <div className="card p-0 flex flex-col overflow-hidden">

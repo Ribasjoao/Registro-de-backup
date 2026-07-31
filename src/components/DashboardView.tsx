@@ -135,13 +135,6 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
 
 export const DashboardView = React.memo(function DashboardView({ backups, clients, isPresentationMode = false, isLoading = false }: DashboardViewProps) {
   const navigate = useNavigate();
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
-
-  if (backups.length === 0) {
-    return <EmptyDashboardState />;
-  }
   const [filterType, setFilterType] = useState<'reuniao' | '7_dias' | '30_dias'>('reuniao');
 
   // Calculates the Friday-closing weekly cycle range
@@ -370,31 +363,39 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
     }
   };
 
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (backups.length === 0) {
+    return <EmptyDashboardState />;
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* 1. FILTER CONTROL HEADER WITH CYCLE RANGE DISPLAY */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card p-5 rounded-3xl border border-border-main shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#130F26] p-5 rounded-2xl border border-[#231C42] shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-brand/10 border border-brand/15 flex items-center justify-center text-brand">
-            <Calendar className="w-5 h-5 animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6B42F2] to-[#8B5CF6] flex items-center justify-center text-white shadow-[0_0_15px_rgba(107,66,242,0.4)]">
+            <Calendar className="w-5 h-5 text-white animate-pulse" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-text-main leading-tight font-heading">Painel de Auditoria</h1>
-            <p className="text-xs text-text-secondary mt-0.5">Visão executiva otimizada para o fechamento semanal de sexta-feira</p>
+            <h1 className="text-base font-extrabold text-white leading-tight font-heading">Painel de Auditoria e Backups</h1>
+            <p className="text-xs text-[#928EA8] mt-0.5">Visão executiva em tempo real com estatísticas consolidadas</p>
           </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
           {/* Cycle Selection Controls */}
-          <div className="flex items-center gap-1 bg-bg-main p-1 rounded-xl border border-border-main">
+          <div className="flex items-center gap-1 bg-[#0A0718] p-1 rounded-xl border border-[#231C42]">
             <button
               onClick={() => setFilterType('reuniao')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+                "px-3 py-1.5 rounded-lg text-xs font-extrabold tracking-wider transition-all whitespace-nowrap cursor-pointer",
                 filterType === 'reuniao'
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-text-secondary hover:text-text-main"
+                  ? "bg-[#6B42F2] text-white shadow-[0_0_10px_rgba(107,66,242,0.5)]"
+                  : "text-[#928EA8] hover:text-white"
               )}
             >
               Ciclo Sáb-Sex
@@ -402,10 +403,10 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             <button
               onClick={() => setFilterType('7_dias')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+                "px-3 py-1.5 rounded-lg text-xs font-extrabold tracking-wider transition-all whitespace-nowrap cursor-pointer",
                 filterType === '7_dias'
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-text-secondary hover:text-text-main"
+                  ? "bg-[#6B42F2] text-white shadow-[0_0_10px_rgba(107,66,242,0.5)]"
+                  : "text-[#928EA8] hover:text-white"
               )}
             >
               7 Dias
@@ -413,19 +414,19 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             <button
               onClick={() => setFilterType('30_dias')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer",
+                "px-3 py-1.5 rounded-lg text-xs font-extrabold tracking-wider transition-all whitespace-nowrap cursor-pointer",
                 filterType === '30_dias'
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-text-secondary hover:text-text-main"
+                  ? "bg-[#6B42F2] text-white shadow-[0_0_10px_rgba(107,66,242,0.5)]"
+                  : "text-[#928EA8] hover:text-white"
               )}
             >
               30 Dias
             </button>
           </div>
 
-          <div className="px-3.5 py-2 rounded-xl bg-bg-main border border-border-main flex items-center gap-2 shadow-inner">
-            <div className="w-2 h-2 rounded-full bg-success animate-ping" />
-            <span className="text-[11px] font-black text-text-main uppercase tracking-wider">
+          <div className="px-3.5 py-2 rounded-xl bg-[#0A0718] border border-[#231C42] flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
+            <span className="text-[11px] font-mono text-white font-bold tracking-wider">
               {filterRange.start.toLocaleDateString('pt-BR')} - {filterRange.end.toLocaleDateString('pt-BR')}
             </span>
           </div>
@@ -435,11 +436,11 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
             onClick={handleExportReport}
-            className="flex items-center gap-2 px-4 py-2 bg-text-main text-bg-main hover:bg-text-main/90 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-[#201844] hover:bg-[#6B42F2] text-white font-bold text-xs rounded-xl border border-[#322860] hover:border-[#6B42F2] transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
             title="Exportar dados para Excel (.csv)"
           >
-            <Download className="w-4 h-4" />
-            Exportar Relatório
+            <Download className="w-4 h-4 text-[#6B42F2] group-hover:text-white" />
+            Exportar CSV
           </motion.button>
         </div>
       </div>
@@ -737,45 +738,46 @@ const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, tren
   return (
     <motion.div 
       variants={itemVariants}
-      whileHover={{ scale: isPresentationMode ? 1.04 : 1.03, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
+      whileHover={{ scale: isPresentationMode ? 1.04 : 1.02, y: -4, transition: { type: "spring", stiffness: 350, damping: 12 } }}
       whileTap={{ scale: 0.98 }}
       style={{ willChange: "transform, opacity" }}
       className={cn(
-        "card transition-all duration-300 border-l-4 shadow-sm",
-        alert ? "border-l-danger bg-danger/[0.02]" : "border-l-brand",
-        isPresentationMode ? "p-6 md:p-8" : "p-5"
+        "card transition-all duration-300 border-[#231C42] bg-[#130F26] p-5 rounded-2xl relative group overflow-hidden",
+        alert ? "border-l-4 border-l-[#FF2A85] bg-gradient-to-r from-[#FF2A85]/10 to-transparent" : "hover:border-[#6B42F2]/50"
       )}
     >
-      <div className="flex justify-between items-start mb-3">
-        <span className={cn(
-          "font-black text-text-secondary uppercase tracking-widest transition-all duration-300",
-          isPresentationMode ? "text-[11px] md:text-xs" : "text-[10px]"
-        )}>{title}</span>
-        <div className={cn(
-          "rounded-xl bg-bg-card shadow-sm border border-border-main flex items-center justify-center transition-all duration-300",
-          isPresentationMode ? "p-3" : "p-2"
-        )}>
-          {icon}
+      {/* Top Header Row */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-[#1D173B] border border-[#2B234F] flex items-center justify-center text-white">
+            {icon}
+          </div>
+          <span className="font-extrabold text-xs text-[#928EA8] tracking-tight">{title}</span>
         </div>
+        
+        {/* Round Arrow Button as seen in Underwriter UI */}
+        <button className="w-7 h-7 rounded-full bg-[#1D173B] hover:bg-[#6B42F2] border border-[#2B234F] hover:border-[#6B42F2] flex items-center justify-center text-[#928EA8] hover:text-white transition-all cursor-pointer">
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
-      <div className="flex items-end justify-between">
+
+      {/* Main Metric Value */}
+      <div className="flex items-baseline justify-between mt-1">
         <div>
-          <div className={cn(
-            "font-black font-heading text-text-main leading-none transition-all duration-300",
-            isPresentationMode ? "text-3xl md:text-5xl mb-2.5" : "text-2xl mb-1.5"
-          )}>{value}</div>
+          <div className="font-extrabold text-3xl text-white tracking-tight leading-none mb-1">
+            {value}
+          </div>
           {subtitle && (
-            <div className={cn(
-              "text-text-secondary font-bold leading-tight transition-all duration-300",
-              isPresentationMode ? "text-[11px] md:text-xs" : "text-[10px]"
-            )}>{subtitle}</div>
+            <div className="text-[11px] text-[#928EA8] font-medium leading-tight">
+              {subtitle}
+            </div>
           )}
         </div>
+
         {trend && (
           <div className={cn(
-            "flex items-center gap-1 font-black px-2 py-0.5 rounded-lg uppercase tracking-wider transition-all duration-300",
-            trendUp ? "text-success bg-success/10 border border-success/15" : "text-danger bg-danger/10 border border-danger/15",
-            isPresentationMode ? "text-xs px-2.5 py-1" : "text-[9px]"
+            "flex items-center gap-1 font-bold px-2.5 py-1 rounded-lg text-[10px] tracking-wider uppercase",
+            trendUp ? "text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20" : "text-[#FF2A85] bg-[#FF2A85]/10 border border-[#FF2A85]/20"
           )}>
             {trend}
           </div>
