@@ -1,43 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: backups
-    // Fields:
-    //   - client, title, status, category, timestamp, responsible, technicalAnalysis, actionPlan, backupType
-    //   - criticality, rootCause, impact, treatmentStatus, actionDeadline, recurrence, responsibleTreatment
-    //
-    // Collection: backup_types
-    // Fields:
-    //   - name
-    //
-    // Collection: clients
-    // Fields:
-    //   - name, createdAt
-    //
-    // Collection: destinations
-    // Fields:
-    //   - name, client, freeSpaceTB, usedSpaceTB, totalSpaceTB, savingsPercent, savingsTB, backupsCount, location
-    //
-    // Collection: users
-    // Fields:
-    //   - uid, email, role, xp, level, displayName, photoURL
-    //
-    // Collection: tasks
-    // Fields:
-    //   - title, description, completed, createdAt, updatedAt, userId, dueDate, slaDate, important, tags, status, type, priority, duration, relatedBackupId, relatedClient, relatedRecordTitle, owner, blockedReason, source, recurrence, checklist
-    //
-    // ===============================================================
 
+    // ===============================================================
+    // Global Default Deny (Catch-All)
+    // ===============================================================
+    // Unmapped collections are blocked by default.
+    
     // ===============================================================
     // Helper Functions
     // ===============================================================
     
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function isAdmin() {
@@ -55,13 +38,13 @@ service cloud.firestore {
       );
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
+
+    // ===============================================================
+    // Data Validation Schemas
+    // ===============================================================
 
     function isValidBackup(data) {
       return hasOnlyAllowedFields(['client', 'title', 'status', 'category', 'timestamp', 'responsible', 'technicalAnalysis', 'actionPlan', 'backupType', 'criticality', 'rootCause', 'impact', 'treatmentStatus', 'actionDeadline', 'recurrence', 'responsibleTreatment']) &&
@@ -115,7 +98,7 @@ service cloud.firestore {
 
     function isValidXPHistory(data) {
       return hasOnlyAllowedFields(['userId', 'amount', 'reason', 'timestamp']) &&
-             data.userId is string && data.userId.size() > 0 && data.userId.size() < 50 &&
+             data.userId is string && data.userId == request.auth.uid &&
              data.amount is number && data.amount >= -100 && data.amount <= 100 &&
              data.reason is string && data.reason.size() > 0 && data.reason.size() < 200 &&
              data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50;
@@ -156,7 +139,7 @@ service cloud.firestore {
 
     function isValidAuditLog(data) {
       return hasOnlyAllowedFields(['userId', 'userName', 'action', 'details', 'timestamp']) &&
-             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.userId is string && data.userId == request.auth.uid &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 150 &&
              data.action is string && data.action.size() > 0 && data.action.size() < 100 &&
              data.details is string && data.details.size() > 0 && data.details.size() < 2000 &&
@@ -169,7 +152,7 @@ service cloud.firestore {
              data.action is string && data.action.size() > 0 && data.action.size() < 200 &&
              data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 50 &&
              data.status in ["success", "warning", "failed", "info"] &&
-             (!('userId' in data) || data.userId == null || (data.userId is string && data.userId.size() < 100)) &&
+             (!('userId' in data) || data.userId == null || (data.userId is string && data.userId == request.auth.uid)) &&
              (!('userPhoto' in data) || data.userPhoto == null || (data.userPhoto is string && data.userPhoto.size() < 1000)) &&
              (!('details' in data) || data.details == null || (data.details is string && data.details.size() < 2000)) &&
              (!('clientName' in data) || data.clientName == null || (data.clientName is string && data.clientName.size() < 200)) &&
@@ -178,36 +161,44 @@ service cloud.firestore {
     }
 
     // ===============================================================
-    // Rules
+    // Collection Match Rules
     // ===============================================================
 
+    // Connectivity Test
+    match /test/{docId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Collection: backups
     match /backups/{backupId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isEditor() && isValidBackup(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(backupId);
+      allow create, update: if isAuthenticated() && isValidId(backupId) && isEditor() && isValidBackup(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(backupId) && isAdmin();
     }
 
+    // Collection: clients
     match /clients/{clientId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAdmin() && isValidClient(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(clientId);
+      allow create, update: if isAuthenticated() && isValidId(clientId) && isAdmin() && isValidClient(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(clientId) && isAdmin();
     }
 
+    // Collection: destinations
     match /destinations/{destinationId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isEditor() && isValidDestination(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(destinationId);
+      allow create, update: if isAuthenticated() && isValidId(destinationId) && isEditor() && isValidDestination(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(destinationId) && isAdmin();
     }
 
+    // Collection: users
     match /users/{userId} {
-      allow read: if isAuthenticated(); // Allow reading all users for leaderboard
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (
+      allow read: if isAuthenticated() && isValidId(userId);
+      allow create: if isAuthenticated() && isValidId(userId) && isOwner(userId) && isValidUser(request.resource.data) && (
         request.resource.data.role == 'viewer' || 
         isAdmin() ||
         (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$'))
       );
-      // Allow users to update their own profile (xp, level, etc) but NOT their role, uid, or email unless admin
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+      allow update: if isAuthenticated() && isValidId(userId) && isValidUser(request.resource.data) && (
         isAdmin() || 
         (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$')) ||
         (isOwner(userId) && 
@@ -219,39 +210,51 @@ service cloud.firestore {
           (!('xp' in resource.data) && request.resource.data.xp <= 100) || 
           ('xp' in resource.data && request.resource.data.xp - resource.data.xp <= 100 && request.resource.data.xp - resource.data.xp >= -100)))
       );
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && isValidId(userId) && isAdmin();
     }
 
+    // Collection: xp_history
     match /xp_history/{historyId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidXPHistory(request.resource.data);
-      allow delete: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
-      allow update: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(historyId) && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidId(historyId) && request.resource.data.userId == request.auth.uid && isValidXPHistory(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(historyId) && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow update: if isAuthenticated() && isValidId(historyId) && isAdmin();
     }
 
+    // Collection: backup_types
     match /backup_types/{typeId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAdmin() && isValidBackupType(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(typeId);
+      allow create, update: if isAuthenticated() && isValidId(typeId) && isAdmin() && isValidBackupType(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(typeId) && isAdmin();
     }
 
+    // Collection: tasks
     match /tasks/{taskId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && isValidTask(request.resource.data);
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && isValidId(taskId) && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidId(taskId) && request.resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && isValidId(taskId) && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() && isValidId(taskId) && resource.data.userId == request.auth.uid;
     }
 
+    // Collection: audit_logs
     match /audit_logs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
-      allow delete, update: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(logId) && isAdmin();
+      allow create: if isAuthenticated() && isValidId(logId) && request.resource.data.userId == request.auth.uid && isValidAuditLog(request.resource.data);
+      allow update, delete: if isAuthenticated() && isValidId(logId) && isAdmin();
     }
 
+    // Collection: activities
     match /activities/{activityId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidActivity(request.resource.data);
-      allow update, delete: if isAdmin();
+      allow read: if isAuthenticated() && isValidId(activityId);
+      allow create: if isAuthenticated() && isValidId(activityId) && isValidActivity(request.resource.data);
+      allow update, delete: if isAuthenticated() && isValidId(activityId) && isAdmin();
+    }
+
+    // ===============================================================
+    // Unmapped Catch-All Deny
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
