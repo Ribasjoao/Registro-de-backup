@@ -1,5 +1,107 @@
 import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 import { GoogleGenAI } from "@google/genai";
+import { logAction } from "./utils/logger";
+import {
+  processMissingBackupCheck,
+  processBackupFailureAlert,
+  processWeeklyComplianceReport
+} from "./utils/alerts";
+
+// Inicializa Firebase Admin SDK se ainda não estiver inicializado
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+const db = admin.firestore();
+
+/**
+ * 2. Triggers de Firestore & Logging Estruturado de Auditoria
+ */
+
+// Trigger ao criar novo registro de backup
+export const onBackupCreated = functions.firestore
+  .document("backups/{backupId}")
+  .onCreate(async (snapshot, context) => {
+    const backupId = context.params.backupId;
+    const data = snapshot.data();
+
+    // 1. Log Estruturado de Criação
+    await logAction(db, {
+      userId: data?.userId || "system",
+      userName: data?.responsible || data?.userName || "Operador",
+      action: "CREATE_BACKUP",
+      collection: "backups",
+      docId: backupId,
+      after: data,
+      details: `Registro de backup criado para cliente "${data?.client || 'N/A'}" com status [${data?.status?.toUpperCase() || 'N/A'}].`
+    });
+
+    // 2. Alerta imediato de falha/aviso
+    await processBackupFailureAlert(db, backupId, data);
+  });
+
+// Trigger ao atualizar registro de backup
+export const onBackupUpdated = functions.firestore
+  .document("backups/{backupId}")
+  .onUpdate(async (change, context) => {
+    const backupId = context.params.backupId;
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+
+    await logAction(db, {
+      userId: afterData?.userId || "system",
+      userName: afterData?.responsible || "Operador",
+      action: "UPDATE_BACKUP",
+      collection: "backups",
+      docId: backupId,
+      before: beforeData,
+      after: afterData,
+      details: `Registro de backup ID ${backupId} atualizado.`
+    });
+  });
+
+// Trigger ao excluir registro de backup
+export const onBackupDeleted = functions.firestore
+  .document("backups/{backupId}")
+  .onDelete(async (snapshot, context) => {
+    const backupId = context.params.backupId;
+    const beforeData = snapshot.data();
+
+    await logAction(db, {
+      userId: "system",
+      userName: "Operador/Admin",
+      action: "DELETE_BACKUP",
+      collection: "backups",
+      docId: backupId,
+      before: beforeData,
+      details: `Registro de backup ID ${backupId} excluído do sistema.`
+    });
+  });
+
+/**
+ * 3.1 — Alerta de Registro Ausente (Cron Diário às 08:00 BRT)
+ */
+export const checkMissingBackup = functions.pubsub
+  .schedule("0 8 * * *")
+  .timeZone("America/Sao_Paulo")
+  .onRun(async () => {
+    console.log("Iniciando verificação agendada de backup ausente (Cron 08:00)...");
+    const result = await processMissingBackupCheck(db);
+    console.log("Resultado da verificação de backup ausente:", result);
+  });
+
+/**
+ * 3.3 — Relatório de Conformidade Semanal (Cron Toda Segunda às 09:00 BRT)
+ */
+export const checkWeeklyCompliance = functions.pubsub
+  .schedule("0 9 * * 1")
+  .timeZone("America/Sao_Paulo")
+  .onRun(async () => {
+    console.log("Iniciando geração de Relatório de Conformidade Semanal (Cron Seg 09:00)...");
+    const result = await processWeeklyComplianceReport(db);
+    console.log("Resultado da verificação de conformidade semanal:", result);
+  });
 
 // A chave da API deve ser configurada no Firebase Secrets
 // firebase functions:secrets:set GEMINI_API_KEY=sua_chave_aqui

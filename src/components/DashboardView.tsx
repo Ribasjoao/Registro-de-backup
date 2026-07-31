@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download } from 'lucide-react';
+import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download, Clock, Bell, FileText, Activity as ActivityIcon } from 'lucide-react';
 import { BackupRecord, Client } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
+import { db, collection, query, orderBy, limit, onSnapshot } from '../firebase';
+import { AuditLog } from '../services/auditService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -136,6 +138,47 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
 export const DashboardView = React.memo(function DashboardView({ backups, clients, isPresentationMode = false, isLoading = false }: DashboardViewProps) {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState<'reuniao' | '7_dias' | '30_dias'>('reuniao');
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+
+  // Real-time listener for audit logs (recent 10)
+  useEffect(() => {
+    const q = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(10));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditLog));
+      setAuditLogs(logs);
+    }, (error) => {
+      console.warn('Could not load audit_logs in real-time:', error);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 30-day compliance rate calculation
+  const compliance30Days = useMemo(() => {
+    const today = new Date();
+    let daysWithBackup = 0;
+    for (let i = 0; i < 30; i++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - i);
+      const dateStr = targetDate.toISOString().split('T')[0];
+      const hasBackup = backups.some(b => b.timestamp && b.timestamp.split('T')[0] === dateStr);
+      if (hasBackup) daysWithBackup++;
+    }
+    return Math.round((daysWithBackup / 30) * 100);
+  }, [backups]);
+
+  // Last failure record
+  const lastFailureRecord = useMemo(() => {
+    const failedList = backups.filter(b => b.status === 'failed' || b.status === 'warning');
+    if (failedList.length === 0) return null;
+    return failedList[0]; // backups is sorted desc
+  }, [backups]);
+
+  // Next missing backup check schedule
+  const nextAlertSchedule = useMemo(() => {
+    const now = new Date();
+    const isPast8AM = now.getHours() >= 8;
+    return isPast8AM ? 'Amanhã às 08:00 (BRT)' : 'Hoje às 08:00 (BRT)';
+  }, []);
 
   // Calculates the Friday-closing weekly cycle range
   // Saturday 00:00:00 to Friday 23:59:59
@@ -445,14 +488,14 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
         </div>
       </div>
 
-      {/* 2. SUMMARY CARDS */}
+      {/* 2. SUMMARY CARDS & MONITORING KPIS */}
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         style={{ willChange: "transform, opacity" }}
         className={cn(
-          "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 transition-all duration-300",
+          "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-300",
           isPresentationMode ? "gap-6 lg:gap-8 mb-4 scale-[1.01]" : "gap-4"
         )}
       >
@@ -466,25 +509,27 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
           isPresentationMode={isPresentationMode}
         />
         <KPICard 
-          title="Total de Backups" 
-          value={total.toString()} 
-          subtitle="Rotinas executadas"
-          icon={<Database className="w-5 h-5 text-brand" />}
+          title="Conformidade (30 dias)" 
+          value={`${compliance30Days}%`} 
+          subtitle="Dias com backup efetuado"
+          icon={<TrendingUp className={cn("w-5 h-5", compliance30Days >= 80 ? "text-[#10B981]" : "text-[#FF2A85]")} />}
+          trend={compliance30Days >= 80 ? 'SLA OK' : 'Abaixo Meta'}
+          trendUp={compliance30Days >= 80}
           isPresentationMode={isPresentationMode}
         />
         <KPICard 
-          title="Falhas Críticas" 
-          value={failed.toString()} 
-          subtitle="Requerem ação urgente"
+          title="Última Falha" 
+          value={lastFailureRecord ? (lastFailureRecord.client || 'Detectada') : 'Nenhuma'} 
+          subtitle={lastFailureRecord ? new Date(lastFailureRecord.timestamp).toLocaleDateString('pt-BR') : 'Sem falhas recentes'}
           icon={<AlertTriangle className="w-5 h-5 text-danger" />}
-          alert={failed > 0}
+          alert={!!lastFailureRecord}
           isPresentationMode={isPresentationMode}
         />
         <KPICard 
-          title="Alertas / Avisos" 
-          value={warning.toString()} 
-          subtitle="Verificações manuais necessárias"
-          icon={<History className="w-5 h-5 text-warning" />}
+          title="Próximo Alerta" 
+          value="08:00 BRT" 
+          subtitle={nextAlertSchedule}
+          icon={<Bell className="w-5 h-5 text-[#8B5CF6]" />}
           isPresentationMode={isPresentationMode}
         />
       </motion.div>
@@ -717,6 +762,69 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
           </div>
         </div>
 
+      </div>
+
+      {/* 5. AUDIT LOGS & AUTOMATED ALERTS FEED */}
+      <div className="card p-6 border border-border-main/60 shadow-md">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#6B42F2]/10 border border-[#6B42F2]/30 flex items-center justify-center text-[#8B5CF6]">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="font-heading text-base font-bold text-text-main">Audit Logs & Alerta do Sistema</h2>
+              <p className="text-xs text-text-secondary">Últimos 10 registros estruturados de operações e alertas automáticos</p>
+            </div>
+          </div>
+          <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-bg-main/60 border border-border-main/40 text-text-secondary">
+            {auditLogs.length} logs
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          {auditLogs.length > 0 ? (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border-main/40 text-text-secondary uppercase text-[10px] font-bold tracking-wider">
+                  <th className="py-2.5 px-3">Data e Hora</th>
+                  <th className="py-2.5 px-3">Usuário / Origem</th>
+                  <th className="py-2.5 px-3">Ação</th>
+                  <th className="py-2.5 px-3">Detalhes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-main/20 font-medium">
+                {auditLogs.map((log) => {
+                  const isAlert = log.action.startsWith('ALERT_');
+                  return (
+                    <tr key={log.id || log.timestamp} className="hover:bg-bg-main/30 transition-colors">
+                      <td className="py-2.5 px-3 whitespace-nowrap text-text-secondary font-mono text-[11px]">
+                        {new Date(log.timestamp).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="py-2.5 px-3 font-bold text-text-main">
+                        {log.userName || log.userId}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase",
+                          isAlert ? "bg-danger/10 text-danger border border-danger/30" : "bg-brand/10 text-brand border border-brand/20"
+                        )}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-text-secondary max-w-md truncate">
+                        {log.details || '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-8 text-text-secondary text-xs italic">
+              Nenhum registro de auditoria gravado recentemente.
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

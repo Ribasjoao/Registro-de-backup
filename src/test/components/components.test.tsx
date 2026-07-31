@@ -237,7 +237,7 @@ describe('3.3 Componentes Críticos - DashboardView (Dashboard de Conformidade)'
     const rateElements = screen.getAllByText('67%');
     expect(rateElements.length).toBeGreaterThan(0);
 
-    const totalElements = screen.getAllByText('3');
-    expect(totalElements.length).toBeGreaterThan(0);
+    expect(screen.getByText('Conformidade (30 dias)')).toBeInTheDocument();
+    expect(screen.getByText('Próximo Alerta')).toBeInTheDocument();
   });
 });
