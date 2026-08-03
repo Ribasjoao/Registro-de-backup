@@ -55,12 +55,12 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="font-heading text-lg font-bold text-primary">Novo Repositório</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-            <X className="w-5 h-5 text-muted" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-bg-card rounded-2xl shadow-2xl border border-border-main w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="px-6 py-4 border-b border-border-main flex items-center justify-between bg-bg-main/50">
+          <h2 className="font-heading text-lg font-bold text-text-main">Novo Repositório</h2>
+          <button onClick={onClose} className="p-2 hover:bg-bg-main text-text-secondary hover:text-text-main rounded-lg transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -72,7 +72,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
                 placeholder="Ex: Repo-Imutavel"
                 autoFocus
               />
@@ -99,19 +99,19 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                   value={client}
                   onChange={(e) => setClient(e.target.value)}
                   placeholder="Nome do cliente"
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                  className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
                   required
                 />
               ) : (
                 <select
                   value={client}
                   onChange={(e) => setClient(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                  className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
                   required
                 >
                   <option value="">Selecione...</option>
                   {clients.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
+                    <option key={c.id} value={c.name} className="bg-bg-card text-text-main">{c.name}</option>
                   ))}
                 </select>
               )}
@@ -126,7 +126,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 step="0.01"
                 value={freeSpaceTB}
                 onChange={(e) => setFreeSpaceTB(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               />
             </div>
             <div>
@@ -136,7 +136,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 step="0.01"
                 value={usedSpaceTB}
                 onChange={(e) => setUsedSpaceTB(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               />
             </div>
           </div>
@@ -149,7 +149,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 step="0.01"
                 value={totalSpaceTB}
                 onChange={(e) => setTotalSpaceTB(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               />
             </div>
             <div>
@@ -157,11 +157,11 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value as any)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               >
-                <option value="Local">Local</option>
-                <option value="S3">S3</option>
-                <option value="Cloud">Cloud</option>
+                <option value="Local" className="bg-bg-card text-text-main">Local</option>
+                <option value="S3" className="bg-bg-card text-text-main">S3</option>
+                <option value="Cloud" className="bg-bg-card text-text-main">Cloud</option>
               </select>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 type="number"
                 value={savingsPercent}
                 onChange={(e) => setSavingsPercent(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 step="0.01"
                 value={savingsTB}
                 onChange={(e) => setSavingsTB(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
               />
             </div>
           </div>
@@ -195,7 +195,7 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
                 type="number"
                 value={backupsCount}
                 onChange={(e) => setBackupsCount(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                className="w-full px-4 py-2 bg-bg-main border border-border-main text-text-main rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
                 placeholder="Ex: 150"
               />
             </div>
@@ -205,13 +205,13 @@ export function AddDestinationModal({ isOpen, onClose, onSave, clients }: AddDes
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-text-main hover:bg-slate-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-border-main rounded-xl text-sm font-semibold text-text-main hover:bg-bg-main transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors shadow-sm"
+              className="flex-1 px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark transition-colors shadow-sm"
             >
               Adicionar
             </button>

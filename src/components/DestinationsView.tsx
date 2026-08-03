@@ -40,27 +40,27 @@ export const DestinationsView = React.memo(function DestinationsView({ destinati
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-heading text-xl text-primary font-bold">Repositórios</h2>
-          <p className="text-sm text-muted mt-1">Gestão simplificada de destinos de armazenamento.</p>
+          <h2 className="font-heading text-xl text-text-main font-bold">Repositórios</h2>
+          <p className="text-sm text-text-secondary mt-1">Gestão simplificada de destinos de armazenamento.</p>
         </div>
         
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-secondary" />
             <input 
               type="text" 
               placeholder="Filtrar..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 h-10 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none w-48"
+              className="pl-10 pr-4 h-10 rounded-lg border border-border-main bg-bg-card text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none w-48"
             />
           </div>
           <button 
             onClick={exportToJson}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-bg-card border border-border-main text-text-main rounded-lg text-sm font-semibold hover:bg-bg-main transition-all shadow-sm"
             title="Salvar JSON"
           >
-            <FileJson className="w-4 h-4" />
+            <FileJson className="w-4 h-4 text-brand" />
             Salvar JSON
           </button>
           {isAdmin && (
@@ -75,56 +75,56 @@ export const DestinationsView = React.memo(function DestinationsView({ destinati
         </div>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-bg-card rounded-xl shadow-sm border border-border-main overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Cliente</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Nome Repo</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Livre (TB + %)</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Usado (TB)</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Total (TB)</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Backups</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Economia % (TB)</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider">Local/Cloud</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Ações</th>
+              <tr className="bg-bg-main border-b border-border-main">
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Cliente</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Nome Repo</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Livre (TB + %)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Usado (TB)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Total (TB)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Backups</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Economia % (TB)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider">Local/Cloud</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-text-secondary uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border-main">
               {filteredDestinations.map((repo) => {
                 const freePercent = repo.totalSpaceTB > 0 
                   ? ((repo.freeSpaceTB / repo.totalSpaceTB) * 100).toFixed(0) 
                   : '0';
 
                 return (
-                  <tr key={repo.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={repo.id} className="hover:bg-bg-main/50 transition-colors group">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-medium text-slate-600">{repo.client || 'N/A'}</span>
+                      <span className="text-xs font-medium text-text-secondary">{repo.client || 'N/A'}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-sm font-bold text-primary">{repo.name}</span>
+                      <span className="text-sm font-bold text-text-main">{repo.name}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-700">{repo.freeSpaceTB} TB ({freePercent}%)</span>
+                      <span className="text-xs text-text-main">{repo.freeSpaceTB} TB ({freePercent}%)</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-700">{repo.usedSpaceTB} TB</span>
+                      <span className="text-xs text-text-main">{repo.usedSpaceTB} TB</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-700">{repo.totalSpaceTB} TB</span>
+                      <span className="text-xs text-text-main">{repo.totalSpaceTB} TB</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-700 font-bold">{repo.backupsCount || 0}</span>
+                      <span className="text-xs text-text-main font-bold">{repo.backupsCount || 0}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-700">{repo.savingsPercent}% ({repo.savingsTB} TB)</span>
+                      <span className="text-xs text-text-main">{repo.savingsPercent}% ({repo.savingsTB} TB)</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={cn(
-                        "inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-                        repo.location === 'Local' ? "bg-slate-100 text-slate-600" :
-                        repo.location === 'S3' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                        "inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase border",
+                        repo.location === 'Local' ? "bg-slate-500/10 text-slate-300 border-slate-500/20" :
+                        repo.location === 'S3' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"
                       )}>
                         {repo.location}
                       </span>
@@ -134,13 +134,13 @@ export const DestinationsView = React.memo(function DestinationsView({ destinati
                         <div className="flex items-center justify-end gap-1">
                           <button 
                             onClick={() => setEditingDest(repo)}
-                            className="p-1 text-muted hover:text-brand hover:bg-slate-100 rounded transition-all"
+                            className="p-1.5 text-text-secondary hover:text-brand hover:bg-bg-main rounded-lg transition-all"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button 
                             onClick={() => setDeletingDestId(repo.id)}
-                            className="p-1 text-muted hover:text-danger hover:bg-slate-100 rounded transition-all"
+                            className="p-1.5 text-text-secondary hover:text-danger hover:bg-bg-main rounded-lg transition-all"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
