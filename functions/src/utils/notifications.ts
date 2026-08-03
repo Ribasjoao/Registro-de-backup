@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import type { Firestore } from 'firebase-admin/firestore';
 
 export interface NotificationsConfig {
   activeChannel: 'email' | 'webhook' | 'both' | 'none';
@@ -30,7 +31,7 @@ export const DEFAULT_NOTIFICATIONS_CONFIG: NotificationsConfig = {
  * Busca a configuração de notificações da collection `notifications_config` (doc: 'default' ou 'global')
  * com fallback para configurações padrão.
  */
-export async function getNotificationsConfig(db: admin.firestore.Firestore): Promise<NotificationsConfig> {
+export async function getNotificationsConfig(db: Firestore): Promise<NotificationsConfig> {
   try {
     const docRef = db.collection('notifications_config').doc('default');
     const docSnap = await docRef.get();
@@ -56,7 +57,7 @@ export async function getNotificationsConfig(db: admin.firestore.Firestore): Pro
  * Envia um alerta utilizando os canais configurados (email, webhook ou ambos).
  */
 export async function sendNotification(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   payload: AlertPayload,
   configOverride?: NotificationsConfig
 ): Promise<{ emailSent: boolean; webhookSent: boolean }> {

@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import type { Firestore } from 'firebase-admin/firestore';
 
 export interface AuditLogParams {
   userId: string;
@@ -22,7 +23,7 @@ export interface StructuredAuditLog extends AuditLogParams {
  * e envia log estruturado em JSON para o Cloud Logging.
  */
 export async function logAction(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   params: AuditLogParams
 ): Promise<string> {
   const timestamp = new Date().toISOString();

@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import type { Firestore } from 'firebase-admin/firestore';
 import { sendNotification, getNotificationsConfig, AlertPayload, NotificationsConfig } from './notifications';
 import { logAction } from './logger';
 
@@ -61,7 +62,7 @@ export function calculateCompliance(
  * Verifica se existe registro de backup para o dia anterior.
  */
 export async function processMissingBackupCheck(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   referenceDate: Date = new Date(),
   configOverride?: NotificationsConfig
 ): Promise<{ missing: boolean; alerted: boolean; recordCount: number }> {
@@ -129,7 +130,7 @@ export async function processMissingBackupCheck(
  * Trigger: onCreate na collection `backups`
  */
 export async function processBackupFailureAlert(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   backupId: string,
   backupData: any,
   configOverride?: NotificationsConfig
@@ -188,7 +189,7 @@ export async function processBackupFailureAlert(
  * Cron: toda segunda-feira às 09:00
  */
 export async function processWeeklyComplianceReport(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   referenceDate: Date = new Date(),
   configOverride?: NotificationsConfig
 ): Promise<{ complianceRate: number; alerted: boolean }> {
