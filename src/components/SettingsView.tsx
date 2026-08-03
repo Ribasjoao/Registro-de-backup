@@ -233,8 +233,28 @@ export const SettingsView = React.memo(function SettingsView({
 
   const [isResettingPersonal, setIsResettingPersonal] = useState(false);
   const [isResettingSystem, setIsResettingSystem] = useState(false);
+  const [isRestoringClients, setIsRestoringClients] = useState(false);
   const [showPersonalConfirm, setShowPersonalConfirm] = useState(false);
   const [showSystemConfirm, setShowSystemConfirm] = useState(false);
+
+  const handleRestoreClients = async () => {
+    setIsRestoringClients(true);
+    const toastId = toast.loading('Restaurando clientes padrão...');
+    try {
+      const { forceRestoreDefaultClients } = await import('../services/seedService');
+      const added = await forceRestoreDefaultClients();
+      if (added > 0) {
+        toast.success(`${added} cliente(s) padrão restaurado(s) com sucesso!`, { id: toastId });
+      } else {
+        toast.success('Todos os clientes padrão já estão presentes no sistema.', { id: toastId });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao restaurar clientes padrão.', { id: toastId });
+    } finally {
+      setIsRestoringClients(false);
+    }
+  };
 
   // Filtros de exclusão para o reset do sistema
   const [deleteBackups, setDeleteBackups] = useState(true);
@@ -692,6 +712,30 @@ export const SettingsView = React.memo(function SettingsView({
             </div>
 
             <div className="space-y-6">
+              {/* Restaurar Clientes Padrão */}
+              <div className="border border-border-main rounded-xl p-5 hover:border-brand/30 transition-all bg-bg-main/50 animate-fadeIn">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-brand/10 text-brand rounded-lg border border-brand/20 shrink-0">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-text-main mb-1">
+                      Restaurar Clientes Padrão no Banco de Dados
+                    </h3>
+                    <p className="text-sm text-text-secondary mb-4">
+                      Caso a lista de clientes esteja vazia ou algum cliente inicial tenha sido removido por engano, utilize este botão para reinserir os clientes padrão (Aditus Consultoria, Fundação Abrinq, G5 Engenharia, Aliplast, CAW, Aroma da Carne) no Firestore.
+                    </p>
+                    <button
+                      disabled={isRestoringClients}
+                      onClick={handleRestoreClients}
+                      className="px-4 py-2 text-xs font-bold text-white bg-brand hover:bg-brand-dark rounded transition-colors disabled:opacity-50"
+                    >
+                      {isRestoringClients ? 'Restaurando...' : 'Restaurar Clientes Padrão'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Reset pessoal */}
               <div className="border border-border-main rounded-xl p-5 hover:border-danger/30 transition-all bg-bg-main/50 animate-fadeIn">
                 <div className="flex items-start gap-4">

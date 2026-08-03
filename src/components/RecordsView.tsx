@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Calendar, Filter, Download, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, Edit2, Trash2, LayoutList, CalendarDays } from 'lucide-react';
+import { Search, Calendar, Filter, Download, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, XCircle, Edit2, Trash2, LayoutList, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { StatusBadge } from './UI';
 import { cn } from '../lib/utils';
 import { BackupRecord, Client } from '../types';
@@ -103,6 +104,20 @@ export const RecordsView = React.memo(function RecordsView({ backups, clients, o
     return result;
   }, [backups, searchTerm, filterMode]);
 
+  // 7-day compliance rate calculation for RecordsView banner
+  const compliance7Days = useMemo(() => {
+    const today = new Date();
+    let daysWithBackup = 0;
+    for (let i = 0; i < 7; i++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - i);
+      const dateStr = targetDate.toISOString().split('T')[0];
+      const hasBackup = backups.some(b => b.timestamp && b.timestamp.split('T')[0] === dateStr);
+      if (hasBackup) daysWithBackup++;
+    }
+    return Math.round((daysWithBackup / 7) * 100);
+  }, [backups]);
+
   const currentMonthLabel = useMemo(() => {
     const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const now = new Date();
@@ -182,7 +197,18 @@ export const RecordsView = React.memo(function RecordsView({ backups, clients, o
   const renderRow = (backup: BackupRecord) => (
     <tr key={backup.id} className="hover:bg-bg-main transition-colors group">
       <td className="py-4 px-6 whitespace-nowrap">
-        <StatusBadge status={backup.status} />
+        <div className="flex items-center gap-2">
+          <span 
+            className={cn(
+              "w-2.5 h-2.5 rounded-full shrink-0 shadow-sm",
+              backup.status === 'success' ? "bg-emerald-500 shadow-emerald-500/50" :
+              backup.status === 'failed' ? "bg-red-500 shadow-red-500/50" :
+              "bg-amber-500 shadow-amber-500/50"
+            )} 
+            title={backup.status === 'success' ? 'Sucesso' : backup.status === 'failed' ? 'Falha' : 'Incompleto / Aviso'}
+          />
+          <StatusBadge status={backup.status} />
+        </div>
       </td>
       <td className="py-4 px-6 whitespace-nowrap font-medium text-text-main">
         {(() => {
@@ -279,7 +305,29 @@ export const RecordsView = React.memo(function RecordsView({ backups, clients, o
   }
 
   return (
-    <div className="card p-0 flex flex-col overflow-hidden">
+    <div className="space-y-4">
+      {compliance7Days < 80 && backups.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-between gap-4 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <XCircle className="w-6 h-6 shrink-0 text-red-500" />
+            <div>
+              <h4 className="font-bold text-sm text-red-400">Alerta de Conformidade Semanal Crítico</h4>
+              <p className="text-xs text-red-400/90 mt-0.5">
+                Conformidade de backups dos últimos 7 dias está abaixo da meta ({compliance7Days}% &lt; 80%). Verifique as rotinas com falha ou pendentes.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-xl bg-red-500/20 text-red-400 text-xs font-black uppercase tracking-wider shrink-0 border border-red-500/30">
+            SLA em risco
+          </span>
+        </motion.div>
+      )}
+
+      <div className="card p-0 flex flex-col overflow-hidden">
       <div className="p-5 border-b border-border-main flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
           <h2 className="font-heading text-lg font-bold text-text-main">Auditoria - {currentMonthLabel}</h2>
@@ -442,6 +490,7 @@ export const RecordsView = React.memo(function RecordsView({ backups, clients, o
         title="Excluir Auditoria de Backup"
         message="Tem certeza que deseja excluir permanentemente esta auditoria de backup? Esta ação não poderá ser desfeita."
       />
+    </div>
     </div>
   );
 });

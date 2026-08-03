@@ -476,6 +476,15 @@ export default function App() {
     };
   }, [user?.uid]);
 
+  // Trigger seeding of clients and core data if empty
+  useEffect(() => {
+    if (loadedStates.clients && clients.length === 0) {
+      import('./services/seedService').then(({ seedInitialDataIfEmpty }) => {
+        seedInitialDataIfEmpty();
+      });
+    }
+  }, [loadedStates.clients, clients.length]);
+
   // Trigger seeding of activities if empty
   useEffect(() => {
     if (loadedStates.backups && loadedStates.clients && loadedStates.users && loadedStates.activities) {

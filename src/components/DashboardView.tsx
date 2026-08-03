@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Calendar, History, Download, Clock, Bell, FileText, Activity as ActivityIcon } from 'lucide-react';
+import { Shield, Database, TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, XCircle, Calendar, History, Download, Clock, Bell, FileText, Activity as ActivityIcon } from 'lucide-react';
 import { BackupRecord, Client } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
 import { db, collection, query, orderBy, limit, onSnapshot } from '../firebase';
 import { AuditLog } from '../services/auditService';
+import { SLABadge } from './SLABadge';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -166,18 +167,43 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
     return Math.round((daysWithBackup / 30) * 100);
   }, [backups]);
 
-  // Last failure record
-  const lastFailureRecord = useMemo(() => {
+  // Last failure info with recentness check (within 7 days)
+  const lastFailureInfo = useMemo(() => {
     const failedList = backups.filter(b => b.status === 'failed' || b.status === 'warning');
-    if (failedList.length === 0) return null;
-    return failedList[0]; // backups is sorted desc
+    if (failedList.length === 0) {
+      return { hasRecentFailure: false, daysAgo: null, record: null };
+    }
+    const lastRecord = failedList[0];
+    const lastDate = new Date(lastRecord.timestamp);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - lastDate.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const hasRecentFailure = diffDays <= 7;
+
+    return {
+      hasRecentFailure,
+      daysAgo: diffDays,
+      record: lastRecord,
+    };
   }, [backups]);
 
-  // Next missing backup check schedule
-  const nextAlertSchedule = useMemo(() => {
+  // Next missing backup check schedule info (check if in less than 2 hours)
+  const nextAlertInfo = useMemo(() => {
     const now = new Date();
+    const next8AM = new Date(now);
+    if (now.getHours() >= 8) {
+      next8AM.setDate(now.getDate() + 1);
+    }
+    next8AM.setHours(8, 0, 0, 0);
+
+    const diffMs = next8AM.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const isSoon = diffHours <= 2;
+
     const isPast8AM = now.getHours() >= 8;
-    return isPast8AM ? 'Amanhã às 08:00 (BRT)' : 'Hoje às 08:00 (BRT)';
+    const scheduleText = isPast8AM ? 'Amanhã às 08:00 (BRT)' : 'Hoje às 08:00 (BRT)';
+
+    return { isSoon, scheduleText };
   }, []);
 
   // Calculates the Friday-closing weekly cycle range
@@ -488,6 +514,40 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
         </div>
       </div>
 
+      {/* CRITICAL SLA ALERT BANNER */}
+      {compliance30Days < 80 && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md mb-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
+              <XCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-red-400">
+                SLA comprometido — conformidade em {compliance30Days}%. Ação corretiva necessária.
+              </h3>
+              <p className="text-xs text-red-400/80 mt-0.5">
+                A taxa de execução de backups dos últimos 30 dias está abaixo do limite crítico de 80%.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const el = document.getElementById('audit-logs-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="px-4 py-2 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 transition-all cursor-pointer shrink-0 shadow-sm active:scale-95 flex items-center gap-1.5"
+          >
+            Ver detalhes
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </motion.div>
+      )}
+
       {/* 2. SUMMARY CARDS & MONITORING KPIS */}
       <motion.div 
         variants={containerVariants}
@@ -512,24 +572,54 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
           title="Conformidade (30 dias)" 
           value={`${compliance30Days}%`} 
           subtitle="Dias com backup efetuado"
-          icon={<TrendingUp className={cn("w-5 h-5", compliance30Days >= 80 ? "text-[#10B981]" : "text-[#FF2A85]")} />}
-          trend={compliance30Days >= 80 ? 'SLA OK' : 'Abaixo Meta'}
-          trendUp={compliance30Days >= 80}
+          icon={<TrendingUp className={cn("w-5 h-5", compliance30Days >= 95 ? "text-green-500" : compliance30Days >= 80 ? "text-amber-500" : "text-red-500")} />}
+          badge={<SLABadge conformity={compliance30Days} size="lg" />}
+          customBorderClass={
+            compliance30Days >= 95 ? "border-green-500/40 bg-green-500/5" :
+            compliance30Days >= 80 ? "border-amber-500/40 bg-amber-500/5" :
+            "border-red-500/50 bg-red-500/10"
+          }
           isPresentationMode={isPresentationMode}
         />
         <KPICard 
           title="Última Falha" 
-          value={lastFailureRecord ? (lastFailureRecord.client || 'Detectada') : 'Nenhuma'} 
-          subtitle={lastFailureRecord ? new Date(lastFailureRecord.timestamp).toLocaleDateString('pt-BR') : 'Sem falhas recentes'}
+          value={lastFailureInfo.record ? (lastFailureInfo.record.client || 'Detectada') : 'Nenhuma'} 
+          subtitle={lastFailureInfo.record ? new Date(lastFailureInfo.record.timestamp).toLocaleDateString('pt-BR') : 'Sem falhas recentes'}
           icon={<AlertTriangle className="w-5 h-5 text-danger" />}
-          alert={!!lastFailureRecord}
+          alert={lastFailureInfo.hasRecentFailure}
+          badge={
+            !lastFailureInfo.hasRecentFailure ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
+                <CheckCircle2 className="w-3 h-3" />
+                Sem falhas recentes
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/30">
+                <XCircle className="w-3 h-3" />
+                {lastFailureInfo.daysAgo === 0 ? 'Hoje' : `Há ${lastFailureInfo.daysAgo}d`}
+              </span>
+            )
+          }
           isPresentationMode={isPresentationMode}
         />
         <KPICard 
           title="Próximo Alerta" 
           value="08:00 BRT" 
-          subtitle={nextAlertSchedule}
+          subtitle={nextAlertInfo.scheduleText}
           icon={<Bell className="w-5 h-5 text-[#8B5CF6]" />}
+          badge={
+            nextAlertInfo.isSoon ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 animate-pulse">
+                <AlertTriangle className="w-3 h-3" />
+                Em breve
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-500/10 border border-purple-500/20">
+                <Clock className="w-3 h-3" />
+                Agendado
+              </span>
+            )
+          }
           isPresentationMode={isPresentationMode}
         />
       </motion.div>
@@ -765,7 +855,7 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
       </div>
 
       {/* 5. AUDIT LOGS & AUTOMATED ALERTS FEED */}
-      <div className="card p-6 border border-border-main/60 shadow-md">
+      <div id="audit-logs-section" className="card p-6 border border-border-main/60 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#6B42F2]/10 border border-[#6B42F2]/30 flex items-center justify-center text-[#8B5CF6]">
@@ -840,9 +930,22 @@ interface KPICardProps {
   trendUp?: boolean;
   alert?: boolean;
   isPresentationMode?: boolean;
+  badge?: React.ReactNode;
+  customBorderClass?: string;
 }
 
-const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, trend, trendUp, alert, isPresentationMode }: KPICardProps) {
+const KPICard = React.memo(function KPICard({ 
+  title, 
+  value, 
+  subtitle, 
+  icon, 
+  trend, 
+  trendUp, 
+  alert, 
+  isPresentationMode,
+  badge,
+  customBorderClass 
+}: KPICardProps) {
   return (
     <motion.div 
       variants={itemVariants}
@@ -850,12 +953,13 @@ const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, tren
       whileTap={{ scale: 0.98 }}
       style={{ willChange: "transform, opacity" }}
       className={cn(
-        "card transition-all duration-300 border-[#231C42] bg-[#130F26] p-5 rounded-2xl relative group overflow-hidden",
+        "card transition-all duration-300 border-[#231C42] bg-[#130F26] p-5 rounded-2xl relative group overflow-hidden flex flex-col justify-between",
+        customBorderClass,
         alert ? "border-l-4 border-l-[#FF2A85] bg-gradient-to-r from-[#FF2A85]/10 to-transparent" : "hover:border-[#6B42F2]/50"
       )}
     >
       {/* Top Header Row */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[#1D173B] border border-[#2B234F] flex items-center justify-center text-white">
             {icon}
@@ -870,7 +974,7 @@ const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, tren
       </div>
 
       {/* Main Metric Value */}
-      <div className="flex items-baseline justify-between mt-1">
+      <div className="flex items-end justify-between mt-1 gap-2 flex-wrap">
         <div>
           <div className="font-extrabold text-3xl text-white tracking-tight leading-none mb-1">
             {value}
@@ -882,14 +986,16 @@ const KPICard = React.memo(function KPICard({ title, value, subtitle, icon, tren
           )}
         </div>
 
-        {trend && (
+        {badge ? (
+          badge
+        ) : trend ? (
           <div className={cn(
             "flex items-center gap-1 font-bold px-2.5 py-1 rounded-lg text-[10px] tracking-wider uppercase",
             trendUp ? "text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20" : "text-[#FF2A85] bg-[#FF2A85]/10 border border-[#FF2A85]/20"
           )}>
             {trend}
           </div>
-        )}
+        ) : null}
       </div>
     </motion.div>
   );
