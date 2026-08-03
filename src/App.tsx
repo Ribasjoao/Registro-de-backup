@@ -117,6 +117,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [showSupportWidget, setShowSupportWidget] = useState(true);
   
   const [loadedStates, setLoadedStates] = useState(() => {
     const hasBackups = !!localStorage.getItem('registro_backup_cache_backups');
@@ -1081,24 +1082,41 @@ export default function App() {
             </nav>
 
             {/* Support Box Widget */}
-            <div className="px-3.5 pb-3 shrink-0">
-              <div className="bg-[#130F26] border border-[#231C42] rounded-2xl p-3.5 text-xs relative overflow-hidden">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#6B42F2]" /> Precisa de Suporte?
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#928EA8] leading-tight">
-                  Contate nossos especialistas de infraestrutura em caso de emergência.
-                </p>
-                <button 
-                  onClick={() => toast.success("Central de Suporte Notificada! Em breve entraremos em contato.")}
-                  className="mt-3 w-full bg-[#201844] hover:bg-[#6B42F2] text-white font-extrabold py-2 px-3 rounded-xl transition-all text-xs border border-[#322860] hover:border-[#6B42F2] shadow-sm cursor-pointer"
+            <AnimatePresence>
+              {showSupportWidget && (
+                <motion.div 
+                  initial={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
+                  transition={{ duration: 0.2 }}
+                  className="px-3.5 pb-3 shrink-0"
                 >
-                  Contatar Suporte
-                </button>
-              </div>
-            </div>
+                  <div className="bg-[#130F26] border border-[#231C42] rounded-2xl p-3.5 text-xs relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#6B42F2]" /> Precisa de Suporte?
+                      </span>
+                      <button
+                        onClick={() => setShowSupportWidget(false)}
+                        className="text-[#928EA8] hover:text-white p-1 rounded-lg hover:bg-[#201844] transition-colors cursor-pointer"
+                        title="Fechar mensagem"
+                        aria-label="Remover mensagem de suporte"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#928EA8] leading-tight">
+                      Contate nossos especialistas de infraestrutura em caso de emergência.
+                    </p>
+                    <button 
+                      onClick={() => toast.success("Central de Suporte Notificada! Em breve entraremos em contato.")}
+                      className="mt-3 w-full bg-[#201844] hover:bg-[#6B42F2] text-white font-extrabold py-2 px-3 rounded-xl transition-all text-xs border border-[#322860] hover:border-[#6B42F2] shadow-sm cursor-pointer"
+                    >
+                      Contatar Suporte
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* User Profile Bar */}
             <div className="p-3.5 border-t border-[#231C42] shrink-0">
