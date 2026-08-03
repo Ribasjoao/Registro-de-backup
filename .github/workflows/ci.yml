@@ -18,19 +18,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Cache node_modules
         uses: actions/cache@v4
         id: node-cache
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-20-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-20-
+            ${{ runner.os }}-node-22-
 
       - name: Install Dependencies
         if: steps.node-cache.outputs.cache-hit != 'true'
@@ -47,19 +47,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Cache node_modules
         uses: actions/cache@v4
         id: node-cache
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-20-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-20-
+            ${{ runner.os }}-node-22-
 
       - name: Install Dependencies
         if: steps.node-cache.outputs.cache-hit != 'true'
@@ -76,19 +76,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Cache node_modules
         uses: actions/cache@v4
         id: node-cache
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-20-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-20-
+            ${{ runner.os }}-node-22-
 
       - name: Install Dependencies
         if: steps.node-cache.outputs.cache-hit != 'true'
@@ -112,19 +112,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Cache node_modules
         uses: actions/cache@v4
         id: node-cache
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-20-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-20-
+            ${{ runner.os }}-node-22-
 
       - name: Install Dependencies
         if: steps.node-cache.outputs.cache-hit != 'true'
