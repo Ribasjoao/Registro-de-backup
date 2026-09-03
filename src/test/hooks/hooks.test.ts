@@ -108,6 +108,7 @@ vi.mock('react-hot-toast', () => ({
     loading: vi.fn().mockReturnValue('toast-123'),
     success: vi.fn(),
     error: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
@@ -231,5 +232,22 @@ describe('3.2 Custom Hooks - useUsers / Autenticação (Gestão de Usuários)', 
 
     expect(newUser).toBeNull();
     expect(result.current.error).toBe('Email em uso');
+  });
+
+  it('deve mapear auth/email-already-in-use para mensagem amigável em português', async () => {
+    const { createUserWithEmailAndPassword } = await import('firebase/auth');
+    const authError = new Error('Firebase: Error (auth/email-already-in-use).');
+    (authError as any).code = 'auth/email-already-in-use';
+    (createUserWithEmailAndPassword as any).mockRejectedValueOnce(authError);
+
+    const { result } = renderHook(() => useUsers());
+
+    let newUser: any;
+    await act(async () => {
+      newUser = await result.current.createUser('Carlos Silva', 'carlos@backup.com', 'senha123', 'editor');
+    });
+
+    expect(newUser).toBeNull();
+    expect(result.current.error).toBe('Este e-mail já está em uso por outro técnico.');
   });
 });

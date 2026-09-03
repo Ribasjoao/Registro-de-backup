@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -16,10 +16,12 @@ interface CreateUserData {
 export function useUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastErrorRef = useRef<string | null>(null);
 
   const createUser = async (name: string, email: string, password: string, role: 'admin' | 'editor' | 'viewer'): Promise<AppUser | null> => {
     setLoading(true);
     setError(null);
+    lastErrorRef.current = null;
     const toastId = toast.loading('Criando usuário...');
 
     let tempApp;
@@ -88,9 +90,17 @@ export function useUsers() {
           console.error("Erro ao deletar app secundário residual:", e);
         }
       }
-      const errorMessage = err?.message || 'Erro desconhecido ao criar usuário';
+      
+      let errorMessage = err?.message || 'Erro desconhecido ao criar usuário';
+      if (err?.code === 'auth/email-already-in-use' || err?.message?.includes('auth/email-already-in-use')) {
+        errorMessage = 'Este e-mail já está em uso por outro técnico.';
+      }
+
       setError(errorMessage);
-      toast.error(`Erro ao criar usuário: ${errorMessage}`, { id: toastId });
+      lastErrorRef.current = errorMessage;
+      if (typeof toast.dismiss === 'function') {
+        toast.dismiss(toastId);
+      }
       console.error('Erro na criação de usuário:', err);
       // Ensure we log correctly if firestore related
       if (err?.code && err.code.includes('permission')) {
@@ -105,6 +115,7 @@ export function useUsers() {
   return {
     createUser,
     loading,
-    error
+    error,
+    getLastError: () => lastErrorRef.current
   };
 }

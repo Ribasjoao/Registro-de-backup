@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle, UserPlus, CheckCircle2, Clock } from 'lucide-react';
+import { Database, History, Bell, Shield, Cloud, HardDrive, Edit2, Plus, Users, Trash2, Search, Settings, AlertTriangle, UserPlus, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { Client, StorageDestination, BackupType, AuditLog } from '../types';
@@ -181,43 +181,64 @@ export const SettingsView = React.memo(function SettingsView({
   }, [activeTab, isAdmin]);
   
   // Custom states/hooks for User Management (Equipe)
-  const { createUser, loading: isCreatingUser } = useUsers();
+  const { createUser, loading: isCreatingUser, error: userHookError, getLastError } = useUsers();
   const [createUserName, setCreateUserName] = useState('');
   const [createUserEmail, setCreateUserEmail] = useState('');
   const [createUserPassword, setCreateUserPassword] = useState('');
   const [createUserRole, setCreateUserRole] = useState<'admin' | 'editor' | 'viewer'>('editor');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (userHookError) {
+      setErrorMessage(userHookError);
+    }
+  }, [userHookError]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
     if (!createUserName.trim()) {
-      toast.error('Informe o nome do usuário');
+      setErrorMessage('Informe o nome completo do técnico.');
       return;
     }
     if (!createUserEmail.trim()) {
-      toast.error('Informe o e-mail do usuário');
+      setErrorMessage('Informe o e-mail corporativo do técnico.');
       return;
     }
     if (!createUserPassword.trim()) {
-      toast.error('Informe a senha do usuário');
+      setErrorMessage('Informe a senha de acesso.');
       return;
     }
     if (createUserPassword.length < 6) {
-      toast.error('A senha deve conter no mínimo 6 caracteres');
+      setErrorMessage('A senha deve conter no mínimo 6 caracteres.');
       return;
     }
 
-    const newUser = await createUser(
-      createUserName.trim(),
-      createUserEmail.trim(),
-      createUserPassword,
-      createUserRole
-    );
+    try {
+      const newUser = await createUser(
+        createUserName.trim(),
+        createUserEmail.trim(),
+        createUserPassword,
+        createUserRole
+      );
 
-    if (newUser) {
-      setCreateUserName('');
-      setCreateUserEmail('');
-      setCreateUserPassword('');
-      setCreateUserRole('editor');
+      if (newUser) {
+        setCreateUserName('');
+        setCreateUserEmail('');
+        setCreateUserPassword('');
+        setCreateUserRole('editor');
+        setErrorMessage(null);
+      } else {
+        const errorMsg = getLastError?.() || userHookError || 'Este e-mail já está em uso por outro técnico.';
+        setErrorMessage(errorMsg);
+      }
+    } catch (err: any) {
+      if (err?.code === 'auth/email-already-in-use' || err?.message?.includes('auth/email-already-in-use')) {
+        setErrorMessage('Este e-mail já está em uso por outro técnico.');
+      } else {
+        setErrorMessage(err?.message || 'Erro ao cadastrar técnico.');
+      }
     }
   };
 
@@ -1085,49 +1106,59 @@ export const SettingsView = React.memo(function SettingsView({
                 Novo Integrante
               </h3>
 
-              <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                {/* Nome */}
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Nome Completo</label>
-                  <input
-                    type="text"
-                    value={createUserName}
-                    onChange={(e) => setCreateUserName(e.target.value)}
-                    placeholder="Carlos Silva"
-                    required
-                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-                  />
-                </div>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                {/* Grid dos Campos */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Nome */}
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Nome Completo</label>
+                    <input
+                      type="text"
+                      value={createUserName}
+                      onChange={(e) => {
+                        setCreateUserName(e.target.value);
+                        if (errorMessage) setErrorMessage(null);
+                      }}
+                      placeholder="Carlos Silva"
+                      required
+                      className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                    />
+                  </div>
 
-                {/* E-mail */}
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">E-mail Corporativo</label>
-                  <input
-                    type="email"
-                    value={createUserEmail}
-                    onChange={(e) => setCreateUserEmail(e.target.value)}
-                    placeholder="exemplo@empresa.com"
-                    required
-                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-                  />
-                </div>
+                  {/* E-mail */}
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">E-mail Corporativo</label>
+                    <input
+                      type="email"
+                      value={createUserEmail}
+                      onChange={(e) => {
+                        setCreateUserEmail(e.target.value);
+                        if (errorMessage) setErrorMessage(null);
+                      }}
+                      placeholder="exemplo@empresa.com"
+                      required
+                      className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                    />
+                  </div>
 
-                {/* Senha */}
-                <div className="space-y-1.5 col-span-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Senha de Acesso</label>
-                  <input
-                    type="password"
-                    value={createUserPassword}
-                    onChange={(e) => setCreateUserPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    required
-                    className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-                  />
-                </div>
+                  {/* Senha */}
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Senha de Acesso</label>
+                    <input
+                      type="password"
+                      value={createUserPassword}
+                      onChange={(e) => {
+                        setCreateUserPassword(e.target.value);
+                        if (errorMessage) setErrorMessage(null);
+                      }}
+                      placeholder="Mínimo 6 caracteres"
+                      required
+                      className="w-full h-10 px-3 rounded-xl border border-border-main bg-bg-card/40 text-text-main text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                    />
+                  </div>
 
-                {/* Nível de Acesso */}
-                <div className="space-y-1.5 col-span-1 flex gap-2">
-                  <div className="flex-1 space-y-1.5">
+                  {/* Nível de Acesso (Permissão) */}
+                  <div className="space-y-1.5 col-span-1">
                     <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Permissão</label>
                     <select
                       value={createUserRole}
@@ -1139,15 +1170,59 @@ export const SettingsView = React.memo(function SettingsView({
                       <option value="viewer" className="bg-bg-card text-text-main">Visualizador</option>
                     </select>
                   </div>
+                </div>
 
+                {/* Mensagem de Erro Integrada ao Formulário (Empurra o layout de forma suave, sem flutuar/sobrepor) */}
+                <AnimatePresence>
+                  {errorMessage && (
+                    <motion.div
+                      id="tech-form-error-alert"
+                      role="alert"
+                      initial={{ opacity: 0, height: 0, y: -4 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -4 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-3.5 rounded-xl border border-red-300 dark:border-red-800/60 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 text-sm flex items-center justify-between gap-3 shadow-sm">
+                        <div className="flex items-center gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                          <span className="font-medium text-xs sm:text-sm">{errorMessage}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setErrorMessage(null)}
+                          className="text-red-500 hover:text-red-700 dark:hover:text-red-200 text-xs font-semibold px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+                          aria-label="Fechar erro"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Botão Cadastrar */}
+                <div className="flex justify-end pt-1">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: isCreatingUser ? 1 : 1.02 }}
+                    whileTap={{ scale: isCreatingUser ? 1 : 0.98 }}
                     type="submit"
+                    id="btn-register-technician"
                     disabled={isCreatingUser}
-                    className="h-10 px-5 bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shrink-0 flex items-center justify-center cursor-pointer shadow-md self-end"
+                    className="h-10 px-6 bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {isCreatingUser ? 'Criando...' : 'Cadastrar'}
+                    {isCreatingUser ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Cadastrando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>Cadastrar</span>
+                      </>
+                    )}
                   </motion.button>
                 </div>
               </form>
