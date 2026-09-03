@@ -57,6 +57,7 @@ interface SettingsViewProps {
   onUpdateBackupType: (updated: BackupType) => void;
   onDeleteBackupType: (id: string) => void;
   users?: any[];
+  onUserCreated?: (user: any) => void;
   onUpdateUserRole?: (userId: string, newRole: string) => void;
   onDeleteUser?: (userId: string) => Promise<void>;
   currentUserId?: string;
@@ -143,6 +144,7 @@ export const SettingsView = React.memo(function SettingsView({
   onUpdateBackupType,
   onDeleteBackupType,
   users = [],
+  onUserCreated,
   onUpdateUserRole,
   onDeleteUser,
   currentUserId,
@@ -224,6 +226,7 @@ export const SettingsView = React.memo(function SettingsView({
       );
 
       if (newUser) {
+        onUserCreated?.(newUser);
         setCreateUserName('');
         setCreateUserEmail('');
         setCreateUserPassword('');

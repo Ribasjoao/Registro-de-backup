@@ -75,7 +75,8 @@
         "xp": { "type": "number" },
         "level": { "type": "string" },
         "displayName": { "type": "string" },
-        "photoURL": { "type": "string" }
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" }
       },
       "required": ["uid", "email", "role"]
     },

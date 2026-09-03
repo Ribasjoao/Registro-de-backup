@@ -86,14 +86,15 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'role', 'xp', 'level', 'displayName', 'photoURL']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'role', 'xp', 'level', 'displayName', 'photoURL', 'createdAt']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 50 &&
              data.email is string && data.email.size() > 0 && data.email.size() < 150 &&
              data.role in ["admin", "editor", "viewer"] &&
              (!('xp' in data) || (data.xp is number && data.xp >= 0)) &&
              (!('level' in data) || (data.level is string && data.level.size() < 100)) &&
              (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() < 100)) &&
-             (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() < 500));
+             (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() < 500)) &&
+             (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() < 50));
     }
 
     function isValidXPHistory(data) {
@@ -193,10 +194,14 @@ service cloud.firestore {
     // Collection: users
     match /users/{userId} {
       allow read: if isAuthenticated() && isValidId(userId);
-      allow create: if isAuthenticated() && isValidId(userId) && isOwner(userId) && isValidUser(request.resource.data) && (
-        request.resource.data.role == 'viewer' || 
-        isAdmin() ||
-        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$'))
+      allow create: if isAuthenticated() && isValidId(userId) && isValidUser(request.resource.data) && (
+        isAdmin() || 
+        (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$')) ||
+        (isOwner(userId) && (
+          request.resource.data.role == 'viewer' || 
+          isAdmin() ||
+          (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email.matches('(?i)^joaoribasdossantos@gmail\\.com$'))
+        ))
       );
       allow update: if isAuthenticated() && isValidId(userId) && isValidUser(request.resource.data) && (
         isAdmin() || 

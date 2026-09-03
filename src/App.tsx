@@ -726,11 +726,27 @@ export default function App() {
     }
   };
 
+  const handleUserCreated = useCallback((newUser: AppUser) => {
+    setUsers(prev => {
+      const exists = prev.some(u => u.id === newUser.id || (u.uid && u.uid === newUser.uid));
+      if (exists) return prev;
+      const updated = [newUser, ...prev];
+      updated.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+      try {
+        localStorage.setItem('registro_backup_cache_users', JSON.stringify(updated));
+      } catch {
+        // Ignora erro de cache
+      }
+      return updated;
+    });
+  }, []);
+
   const updateUserRole = async (userId: string, newRole: string) => {
     if (!effectiveIsAdmin) return;
     const toastId = toast.loading('Atualizando permissão...');
     try {
       await updateDoc(doc(db, 'users', userId), { role: newRole });
+      setUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, role: newRole as any } : u));
       toast.success('Perfil de usuário atualizado!', { id: toastId });
       if (user) {
         await logAction(
@@ -751,6 +767,7 @@ export default function App() {
     const toastId = toast.loading('Excluindo usuário...');
     try {
       await deleteDoc(doc(db, 'users', userId));
+      setUsers(prev => prev.filter(u => u.id !== userId && u.uid !== userId));
       toast.success('Usuário excluído com sucesso!', { id: toastId });
       if (user) {
         await logAction(
@@ -1304,6 +1321,7 @@ export default function App() {
                       onAddDestination={addDestination} 
                       onDeleteDestination={deleteDestination}
                       users={users}
+                      onUserCreated={handleUserCreated}
                       onUpdateUserRole={updateUserRole}
                       onDeleteUser={deleteUser}
                       currentUserId={user?.uid}
