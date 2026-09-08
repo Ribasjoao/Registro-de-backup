@@ -296,7 +296,20 @@ export function RegisterBackupModal({
       toast.success('Relatório PDF lido com sucesso pelo Gemini!', { id: loadingToast });
     } catch (err: any) {
       console.error('Erro na análise de PDF:', err);
-      toast.error(`Falha ao processar PDF: ${err.message || 'Erro desconhecido'}`, { id: loadingToast });
+      let errMsg = err?.message || 'Erro desconhecido';
+      try {
+        if (errMsg.startsWith('{') && errMsg.endsWith('}')) {
+          const parsedErr = JSON.parse(errMsg);
+          if (parsedErr?.error?.message) {
+            errMsg = parsedErr.error.message;
+          }
+        }
+      } catch {}
+
+      if (errMsg.includes('high demand') || errMsg.includes('503') || errMsg.includes('UNAVAILABLE')) {
+        errMsg = 'A API Gemini está com alta demanda momentânea no Google. Por favor, tente enviar novamente em alguns segundos.';
+      }
+      toast.error(`Falha ao processar PDF: ${errMsg}`, { id: loadingToast, duration: 6000 });
     } finally {
       setIsAiAnalyzing(false);
       if (fileInputRef.current) {

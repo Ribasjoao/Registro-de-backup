@@ -64,100 +64,127 @@ Sua missão:
 Retorne os dados em formato JSON estrito conforme o schema definido. Todos os textos em Português do Brasil.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        {
-          inlineData: {
-            mimeType: 'application/pdf',
-            data: cleanBase64,
-          },
-        },
-        {
-          text: prompt,
-        },
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            clientName: {
-              type: Type.STRING,
-              description: 'Nome da empresa, cliente ou servidor identificado no relatório',
-            },
-            backupDate: {
-              type: Type.STRING,
-              description: 'Data do backup identificada no relatório no formato ISO (YYYY-MM-DDTHH:mm:ss) ou YYYY-MM-DD',
-            },
-            overallStatus: {
-              type: Type.STRING,
-              enum: ['success', 'warning', 'failed'],
-              description: 'Status consolidado do backup (failed se houve erros críticos, warning se houve alertas, success se tudo OK)',
-            },
-            summary: {
-              type: Type.STRING,
-              description: 'Breve resumo executivo em 1 ou 2 frases sobre o resultado do backup',
-            },
-            jobs: {
-              type: Type.ARRAY,
-              description: 'Lista de tarefas ou jobs identificados no relatório',
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: {
-                    type: Type.STRING,
-                    description: 'Nome da tarefa ou VM/servidor de backup (ex: Backup VM-DC01, Arquivos Financeiro)',
-                  },
-                  backupType: {
-                    type: Type.STRING,
-                    enum: ['LOCAL', 'CLOUD'],
-                    description: 'Destino do backup (LOCAL ou CLOUD)',
-                  },
-                  status: {
-                    type: Type.STRING,
-                    enum: ['success', 'warning', 'failed'],
-                    description: 'Status deste job específico',
-                  },
-                  technicalAnalysis: {
-                    type: Type.STRING,
-                    description: 'Diagnóstico técnico da falha/erro ou confirmação de sucesso com detalhes',
-                  },
-                  actionPlan: {
-                    type: Type.STRING,
-                    description: 'Passos recomendados para resolução imediata do erro (se aplicável)',
-                  },
-                  criticality: {
-                    type: Type.STRING,
-                    enum: ['low', 'medium', 'high', 'critical'],
-                    description: 'Gravidade do incidente',
-                  },
-                  rootCause: {
-                    type: Type.STRING,
-                    enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
-                    description: 'Categoria da causa raiz identificada',
-                  },
-                  impact: {
-                    type: Type.STRING,
-                    enum: ['low', 'medium', 'high'],
-                    description: 'Nível de impacto operacional estimado',
-                  },
-                },
-                required: ['title', 'backupType', 'status'],
+    // Modelos com suporte multimodal a documentos PDF em ordem de prioridade para alta disponibilidade
+    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    let responseText = '';
+    let lastError: any = null;
+
+    for (const modelName of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: [
+            {
+              inlineData: {
+                mimeType: 'application/pdf',
+                data: cleanBase64,
               },
             },
+            {
+              text: prompt,
+            },
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                clientName: {
+                  type: Type.STRING,
+                  description: 'Nome da empresa, cliente ou servidor identificado no relatório',
+                },
+                backupDate: {
+                  type: Type.STRING,
+                  description: 'Data do backup identificada no relatório no formato ISO (YYYY-MM-DDTHH:mm:ss) ou YYYY-MM-DD',
+                },
+                overallStatus: {
+                  type: Type.STRING,
+                  enum: ['success', 'warning', 'failed'],
+                  description: 'Status consolidado do backup (failed se houve erros críticos, warning se houve alertas, success se tudo OK)',
+                },
+                summary: {
+                  type: Type.STRING,
+                  description: 'Breve resumo executivo em 1 ou 2 frases sobre o resultado do backup',
+                },
+                jobs: {
+                  type: Type.ARRAY,
+                  description: 'Lista de tarefas ou jobs identificados no relatório',
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: {
+                        type: Type.STRING,
+                        description: 'Nome da tarefa ou VM/servidor de backup (ex: Backup VM-DC01, Arquivos Financeiro)',
+                      },
+                      backupType: {
+                        type: Type.STRING,
+                        enum: ['LOCAL', 'CLOUD'],
+                        description: 'Destino do backup (LOCAL ou CLOUD)',
+                      },
+                      status: {
+                        type: Type.STRING,
+                        enum: ['success', 'warning', 'failed'],
+                        description: 'Status deste job específico',
+                      },
+                      technicalAnalysis: {
+                        type: Type.STRING,
+                        description: 'Diagnóstico técnico da falha/erro ou confirmação de sucesso com detalhes',
+                      },
+                      actionPlan: {
+                        type: Type.STRING,
+                        description: 'Passos recomendados para resolução imediata do erro (se aplicável)',
+                      },
+                      criticality: {
+                        type: Type.STRING,
+                        enum: ['low', 'medium', 'high', 'critical'],
+                        description: 'Gravidade do incidente',
+                      },
+                      rootCause: {
+                        type: Type.STRING,
+                        enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
+                        description: 'Categoria da causa raiz identificada',
+                      },
+                      impact: {
+                        type: Type.STRING,
+                        enum: ['low', 'medium', 'high'],
+                        description: 'Nível de impacto operacional estimado',
+                      },
+                    },
+                    required: ['title', 'backupType', 'status'],
+                  },
+                },
+              },
+              required: ['clientName', 'backupDate', 'overallStatus', 'summary', 'jobs'],
+            },
           },
-          required: ['clientName', 'backupDate', 'overallStatus', 'summary', 'jobs'],
-        },
-      },
-    });
+        });
 
-    const text = response.text?.trim();
-    if (!text) {
-      return res.status(502).json({ error: 'Resposta vazia do modelo Gemini.' });
+        const text = response.text?.trim();
+        if (text) {
+          responseText = text;
+          break;
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Tentativa com modelo ${modelName} retornou erro:`, err?.message || err);
+        // Se for erro de alta demanda (503 / UNAVAILABLE), tenta imediatamente o próximo modelo
+        const isUnavailable = err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('high demand') || err?.message?.includes('UNAVAILABLE');
+        if (!isUnavailable) {
+          throw err;
+        }
+      }
     }
 
-    const parsedData = JSON.parse(text);
+    if (!responseText) {
+      if (lastError?.message?.includes('high demand') || lastError?.status === 503) {
+        return res.status(503).json({
+          error: 'Os servidores da Google API estão com alta demanda temporária neste momento. Por favor, aguarde alguns instantes e tente novamente.',
+        });
+      }
+      return res.status(502).json({ error: lastError?.message || 'Resposta vazia do modelo Gemini.' });
+    }
+
+    const parsedData = JSON.parse(responseText);
     return res.status(200).json({ success: true, data: parsedData });
   } catch (err: any) {
     console.error('Erro na análise de PDF (Vercel API):', err);
