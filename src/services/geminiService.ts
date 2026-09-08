@@ -1,5 +1,78 @@
-import { functions, httpsCallable } from "../firebase";
+import { functions, httpsCallable, auth } from "../firebase";
 import { BackupRecord } from "../types";
+
+export interface ParsedJobItem {
+  title: string;
+  backupType: 'LOCAL' | 'CLOUD';
+  status: 'success' | 'warning' | 'failed';
+  technicalAnalysis?: string;
+  actionPlan?: string;
+  criticality?: 'low' | 'medium' | 'high' | 'critical';
+  rootCause?: 'hardware' | 'network' | 'storage' | 'permission' | 'software' | 'other';
+  impact?: 'low' | 'medium' | 'high';
+}
+
+export interface ParsedBackupReport {
+  clientName: string;
+  backupDate: string;
+  overallStatus: 'success' | 'warning' | 'failed';
+  summary: string;
+  jobs: ParsedJobItem[];
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+/**
+ * Envia um PDF de relatório de backup para a rota segura do servidor backend,
+ * onde o Gemini 3.8 Flash analisa e extrai todos os erros e metadados.
+ */
+export async function parseBackupPdf(
+  file: File,
+  knownClients: string[] = []
+): Promise<ParsedBackupReport> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Você precisa estar autenticado no sistema para analisar relatórios com IA.");
+  }
+
+  const token = await currentUser.getIdToken();
+  const pdfBase64 = await fileToBase64(file);
+
+  const response = await fetch("/api/ai/parse-backup-pdf", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      pdfBase64,
+      filename: file.name,
+      knownClients,
+    }),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || `Falha no servidor (Código ${response.status}) ao analisar o PDF.`);
+  }
+
+  const resJson = await response.json();
+  if (!resJson.success || !resJson.data) {
+    throw new Error(resJson.error || "O Gemini não conseguiu estruturar os dados do PDF.");
+  }
+
+  return resJson.data as ParsedBackupReport;
+}
 
 export async function generateWeeklyReport(backups: BackupRecord[]): Promise<string> {
   try {

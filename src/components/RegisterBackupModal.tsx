@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from './UI';
 import { LiquidMetalButton } from './LiquidMetal';
 import { 
@@ -22,8 +22,12 @@ import {
   Cloud,
   Server,
   Sparkles,
-  Info
+  Info,
+  UploadCloud,
+  Loader2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { parseBackupPdf, analyzeBackupLog } from '../services/geminiService';
 import { Client, BackupRecord, BackupStatus, BackupType, Criticality, RootCause, Impact, TreatmentStatus } from '../types';
 import { cn } from '../lib/utils';
 
@@ -76,12 +80,27 @@ export function RegisterBackupModal({
   const [isCustomClient, setIsCustomClient] = useState(false);
   const [jobs, setJobs] = useState<JobItem[]>([]);
 
+  // AI PDF Import & Log Analysis States
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiImportInfo, setAiImportInfo] = useState<{
+    filename: string;
+    summary: string;
+    totalJobs: number;
+    failedJobs: number;
+  } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isAiImported, setIsAiImported] = useState(false);
+  const [analyzingJobId, setAnalyzingJobId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Reset or initialize state
   useEffect(() => {
     if (initialData) {
       setClient(initialData.client || '');
       setTimestamp(initialData.timestamp || new Date().toISOString());
       setIsCustomClient(false);
+      setIsAiImported(false);
+      setAiImportInfo(null);
       
       setJobs([
         {
@@ -106,13 +125,15 @@ export function RegisterBackupModal({
       setTimestamp(new Date().toISOString());
       setJobs([]);
       setIsCustomClient(false);
+      setIsAiImported(false);
+      setAiImportInfo(null);
     }
     setError('');
   }, [initialData, isOpen]);
 
-  // Handle client selection -> load previous jobs or smart defaults
+  // Handle client selection -> load previous jobs or smart defaults (unless loaded via AI)
   useEffect(() => {
-    if (!client || initialData) return;
+    if (!client || initialData || isAiImported) return;
     
     // Search history for previous jobs of this client
     const previousBackups = backups.filter(b => b.client.toLowerCase() === client.toLowerCase());
@@ -203,7 +224,113 @@ export function RegisterBackupModal({
         }
       ]);
     }
-  }, [client, backups, initialData]);
+  }, [client, backups, initialData, isAiImported]);
+
+  // Upload e Análise Automática de PDF com Gemini
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      toast.error('Por favor, selecione um arquivo PDF de relatório de backup.');
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('O arquivo PDF excede o limite máximo de 20MB.');
+      return;
+    }
+
+    setIsAiAnalyzing(true);
+    const loadingToast = toast.loading('Gemini analisando relatório PDF e diagnosticando erros...');
+
+    try {
+      const knownNames = clients.map(c => c.name);
+      const parsed = await parseBackupPdf(file, knownNames);
+
+      // Identificar cliente correspondente ou criar novo
+      let matchedClient = parsed.clientName?.trim() || 'Servidor';
+      const existing = clients.find(c => c.name.toLowerCase() === matchedClient.toLowerCase());
+      if (existing) {
+        matchedClient = existing.name;
+        setIsCustomClient(false);
+      } else {
+        setIsCustomClient(true);
+      }
+
+      setIsAiImported(true);
+      setClient(matchedClient);
+
+      if (parsed.backupDate) {
+        try {
+          const parsedDate = new Date(parsed.backupDate);
+          if (!isNaN(parsedDate.getTime())) {
+            setTimestamp(parsedDate.toISOString());
+          }
+        } catch {}
+      }
+
+      const newJobs: JobItem[] = (parsed.jobs || []).map((j, idx) => ({
+        id: `ai-job-${idx}-${Date.now()}`,
+        title: j.title?.trim() || `Job #${idx + 1}`,
+        backupType: j.backupType === 'CLOUD' ? 'CLOUD' : 'LOCAL',
+        status: (['success', 'warning', 'failed'].includes(j.status) ? j.status : 'success') as BackupStatus,
+        technicalAnalysis: j.technicalAnalysis || '',
+        actionPlan: j.actionPlan || '',
+        criticality: (j.criticality as Criticality) || 'medium',
+        rootCause: (j.rootCause as RootCause) || 'other',
+        impact: (j.impact as Impact) || 'medium',
+        treatmentStatus: 'pending',
+        responsibleTreatment: defaultResponsible || '',
+        actionDeadline: '',
+        recurrence: false,
+        showExecutiveFields: j.status !== 'success'
+      }));
+
+      setJobs(newJobs);
+      setAiImportInfo({
+        filename: file.name,
+        summary: parsed.summary || 'Relatório processado e campos preenchidos com sucesso.',
+        totalJobs: newJobs.length,
+        failedJobs: newJobs.filter(j => j.status === 'failed' || j.status === 'warning').length
+      });
+
+      toast.success('Relatório PDF lido com sucesso pelo Gemini!', { id: loadingToast });
+    } catch (err: any) {
+      console.error('Erro na análise de PDF:', err);
+      toast.error(`Falha ao processar PDF: ${err.message || 'Erro desconhecido'}`, { id: loadingToast });
+    } finally {
+      setIsAiAnalyzing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Análise pontual de log de erro de um job específico
+  const handleAnalyzeJobLog = async (jobId: string, currentText: string) => {
+    if (!currentText || !currentText.trim()) {
+      toast.error('Insira o log ou mensagem de erro no campo antes de acionar a IA.');
+      return;
+    }
+    setAnalyzingJobId(jobId);
+    try {
+      const res = await analyzeBackupLog(currentText, client);
+      if (typeof res === 'object' && res.technicalAnalysis) {
+        updateJob(jobId, {
+          technicalAnalysis: res.technicalAnalysis,
+          actionPlan: res.actionPlan || undefined,
+          showExecutiveFields: true
+        });
+        toast.success('Diagnóstico técnico e plano de ação gerados!');
+      } else if (typeof res === 'string') {
+        updateJob(jobId, { technicalAnalysis: res });
+        toast.success('Diagnóstico gerado!');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao analisar log');
+    } finally {
+      setAnalyzingJobId(null);
+    }
+  };
 
   const updateJob = (id: string, updates: Partial<JobItem>) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j));
@@ -329,6 +456,112 @@ export function RegisterBackupModal({
     >
       <div className="space-y-4 pr-1">
         
+        {/* SEÇÃO INTELIGENTE DE IMPORTAÇÃO DE PDF COM GEMINI */}
+        {!initialData && (
+          <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/5 via-bg-card to-bg-card p-4 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                  <Sparkles className="w-4 h-4 text-brand animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-text-main flex items-center gap-1.5">
+                    Leitura de Relatório PDF com IA
+                    <span className="text-[9px] bg-brand/15 text-brand px-1.5 py-0.5 rounded-md font-extrabold border border-brand/20">
+                      Gemini 3.8 Flash
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-text-secondary font-medium">
+                    Envie o PDF de relatório de backup (Veeam, Nakivo, Bacula, etc.) para diagnóstico e preenchimento instantâneo.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {aiImportInfo ? (
+              <div className="p-3 bg-brand/10 border border-brand/25 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                    <span className="text-xs font-bold text-text-main">
+                      {aiImportInfo.filename}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider bg-bg-main text-text-secondary px-2 py-0.5 rounded border border-border-main/40">
+                      {aiImportInfo.totalJobs} jobs identificados ({aiImportInfo.failedJobs} com ocorrência{aiImportInfo.failedJobs !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiImportInfo(null);
+                      setIsAiImported(false);
+                    }}
+                    className="text-[10px] font-bold text-text-muted hover:text-danger flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Remover e redefinir"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Limpar
+                  </button>
+                </div>
+                {aiImportInfo.summary && (
+                  <p className="text-[11px] text-text-secondary italic bg-bg-card/70 p-2 rounded-lg border border-border-main/30">
+                    "{aiImportInfo.summary}"
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFileUpload(file);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "border-2 border-dashed rounded-xl p-4 flex flex-col sm:flex-row items-center justify-center gap-3 transition-all cursor-pointer text-center sm:text-left",
+                  isDragOver 
+                    ? "border-brand bg-brand/10 scale-[0.99]" 
+                    : "border-border-main/60 hover:border-brand/50 hover:bg-brand/[0.02]",
+                  isAiAnalyzing && "opacity-75 pointer-events-none"
+                )}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="application/pdf,.pdf" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }} 
+                />
+                <div className="w-10 h-10 rounded-xl bg-bg-main border border-border-main/50 flex items-center justify-center text-brand shrink-0 shadow-inner">
+                  {isAiAnalyzing ? (
+                    <Loader2 className="w-5 h-5 text-brand animate-spin" />
+                  ) : (
+                    <UploadCloud className="w-5 h-5 text-brand" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-text-main">
+                    {isAiAnalyzing 
+                      ? "Gemini processando PDF e diagnosticando ocorrências..." 
+                      : "Clique para selecionar ou arraste o arquivo PDF aqui"}
+                  </p>
+                  <p className="text-[10px] text-text-secondary">
+                    {isAiAnalyzing
+                      ? "Consultando a IA via backend seguro sem expor credenciais..."
+                      : "Arquivos de até 20MB. Todos os logs, códigos de erro e causas são catalogados."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* CLIENT SELECTION CARD */}
         <div className="bg-bg-card/40 border border-border-main/50 p-4 rounded-2xl space-y-3.5">
           <div className="flex items-center justify-between">
@@ -518,15 +751,36 @@ export function RegisterBackupModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Technical Description */}
                         <div className="space-y-1">
-                          <label className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-text-secondary">
-                            <FileText className="w-3 h-3 text-brand" />
-                            Análise / Descrição do Ocorrido
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-text-secondary">
+                              <FileText className="w-3 h-3 text-brand" />
+                              Análise / Descrição do Ocorrido
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleAnalyzeJobLog(job.id, job.technicalAnalysis || '')}
+                              disabled={analyzingJobId === job.id}
+                              className="text-[8px] font-black uppercase tracking-wider text-brand hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Diagnosticar erro e sugerir plano de ação usando IA"
+                            >
+                              {analyzingJobId === job.id ? (
+                                <>
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                  Diagnosticando...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  Diagnosticar Log com IA
+                                </>
+                              )}
+                            </button>
+                          </div>
                           <textarea
                             rows={2}
                             value={job.technicalAnalysis || ''}
                             onChange={(e) => updateJob(job.id, { technicalAnalysis: e.target.value })}
-                            placeholder="Descreva o que gerou o log de alerta ou a falha do job..."
+                            placeholder="Descreva o que gerou o log de alerta ou a falha do job (ou clique em Diagnosticar com IA)..."
                             className="w-full p-2 rounded-lg border border-border-main/40 bg-bg-main text-text-main text-xs font-semibold focus:border-brand outline-none resize-none transition-all shadow-inner"
                           />
                         </div>
