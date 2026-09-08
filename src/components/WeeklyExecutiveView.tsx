@@ -567,8 +567,8 @@ export const WeeklyExecutiveView = React.memo(function WeeklyExecutiveView({ bac
           {/* Distribution Chart */}
           <div className="card p-6">
             <h3 className="text-sm font-bold text-text-main mb-6 uppercase tracking-tight">Distribuição por Causa</h3>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[200px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={Object.entries(backups.reduce((acc, curr) => {
                   if (curr.status !== 'success' && curr.rootCause) {
                     acc[curr.rootCause] = (acc[curr.rootCause] || 0) + 1;

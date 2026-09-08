@@ -13,6 +13,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'pwa-icon.svg'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/api/],
       },
       manifest: {
         name: 'Registro de Backup',

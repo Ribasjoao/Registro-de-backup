@@ -69,8 +69,20 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Permite payloads de até 25MB para suportar relatórios PDF codificados em Base64
-  app.use(express.json({ limit: '25mb' }));
+  // Middleware global de CORS e preflight OPTIONS para evitar 405 em requisições do frontend
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
+  // Permite payloads de até 50MB para suportar relatórios PDF codificados em Base64
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -268,6 +280,48 @@ ${log}
     } catch (err: any) {
       console.error('Erro ao analisar log textual:', err);
       return res.status(500).json({ error: err?.message || 'Erro ao analisar log' });
+    }
+  });
+
+  // Endpoint seguro: Geração de relatório executivo semanal
+  app.post('/api/ai/generate-weekly-report', requireAuth, async (req, res) => {
+    try {
+      const { backups } = req.body;
+      if (!Array.isArray(backups) || backups.length === 0) {
+        return res.status(400).json({ error: 'Nenhum registro de backup fornecido para geração do relatório.' });
+      }
+
+      const ai = getGenAI();
+      const prompt = `
+Você é um Especialista Sênior em Gestão de Continuidade de Negócios e Infraestrutura de TI.
+Gere um relatório executivo semanal de backup consolidado, profissional e analítico com base nos seguintes dados de execução:
+
+Dados brutos (${backups.length} registros analisados):
+${JSON.stringify(backups.slice(0, 100), null, 2)}
+
+O relatório deve conter:
+1. Resumo Executivo: Visão geral da saúde dos backups, taxa de conformidade e riscos imediatos.
+2. Análise de Falhas e Incidentes Críticos: Destaque os jobs que falharam ou apresentaram avisos recorrentes.
+3. Avaliação de Capacidade e Armazenamento: Tendências observadas e pontos de atenção.
+4. Plano de Ação Recomendado: Lista de prioridades técnicas para a próxima semana.
+
+Formato: Retorne um texto estruturado em Markdown elegante e profissional em Português do Brasil.
+`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+      });
+
+      const text = response.text?.trim();
+      if (!text) {
+        return res.status(502).json({ error: 'Falha ao obter relatório da IA.' });
+      }
+
+      return res.json({ success: true, text });
+    } catch (err: any) {
+      console.error('Erro ao gerar relatório semanal:', err);
+      return res.status(500).json({ error: err?.message || 'Erro ao gerar relatório semanal' });
     }
   });
 

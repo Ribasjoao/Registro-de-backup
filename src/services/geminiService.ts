@@ -76,71 +76,82 @@ export async function parseBackupPdf(
 
 export async function generateWeeklyReport(backups: BackupRecord[]): Promise<string> {
   try {
-    // Invocando a Cloud Function de forma segura
-    const generateReportFn = httpsCallable(functions, "generateWeeklyReport");
-    
-    console.log("Chamando Cloud Function 'generateWeeklyReport' com", backups.length, "backups");
-    
+    const currentUser = auth.currentUser;
+    const token = currentUser ? await currentUser.getIdToken() : '';
+
+    const response = await fetch('/api/ai/generate-weekly-report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ backups }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.text) {
+        return data.text;
+      }
+    }
+
+    // Fallback para Cloud Function se disponível
+    const generateReportFn = httpsCallable(functions, 'generateWeeklyReport');
     const result = await generateReportFn({ backups });
     const data = result.data as { text: string };
-
-    if (!data.text) {
-      return "O serviço de IA não retornou um texto válido.";
-    }
-
-    return data.text;
+    return data.text || 'O serviço de IA não retornou um texto válido.';
   } catch (error: any) {
-    console.error("Erro ao chamar Cloud Function:", error);
-    
-    // Tratamento de erros específicos do Firebase Functions
-    if (error.code === "unauthenticated") {
-      return "Erro: Você precisa estar logado para realizar esta ação.";
-    }
-    if (error.code === "permission-denied") {
-      return "Erro: Você não tem permissão para gerar relatórios.";
-    }
-    
-    return `Erro ao conectar com o serviço de IA: ${error.message || "Erro desconhecido"}`;
+    console.error('Erro ao gerar relatório semanal:', error);
+    return `Erro ao conectar com o serviço de IA: ${error?.message || 'Erro desconhecido'}`;
   }
 }
 
-export async function analyzeBackupLog(log: string, clientName: string): Promise<{ technicalAnalysis: string; actionPlan: string } | string> {
+export async function analyzeBackupLog(
+  log: string,
+  clientName: string
+): Promise<{ technicalAnalysis: string; actionPlan: string } | string> {
   try {
-    const analyzeLogFn = httpsCallable(functions, "analyzeBackupLog");
-    
-    console.log("Chamando Cloud Function 'analyzeBackupLog' para o cliente", clientName);
-    
+    const currentUser = auth.currentUser;
+    const token = currentUser ? await currentUser.getIdToken() : '';
+
+    const response = await fetch('/api/ai/analyze-log', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ log, clientName }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.technicalAnalysis && data.actionPlan) {
+        return {
+          technicalAnalysis: data.technicalAnalysis,
+          actionPlan: data.actionPlan,
+        };
+      }
+    }
+
+    // Fallback para Cloud Function se disponível
+    const analyzeLogFn = httpsCallable(functions, 'analyzeBackupLog');
     const result = await analyzeLogFn({ log, clientName });
     const data = result.data as { text: string };
-
     if (!data.text) {
-      return "O serviço de IA não retornou uma análise válida.";
+      return 'O serviço de IA não retornou uma análise válida.';
     }
 
-    // A IA retorna um texto em Markdown com as duas seções.
-    // Vamos tentar separar as seções se possível, ou retornar o texto completo para ser processado.
-    // Para simplificar e seguir o pedido de preencher os dois campos, vamos assumir que a IA 
-    // segue a estrutura solicitada.
-    
     const text = data.text;
     const sections = text.split(/2\.\s+\*\*Plano de Ação\*\*/i);
-    
     let technicalAnalysis = text;
-    let actionPlan = "";
-
+    let actionPlan = '';
     if (sections.length === 2) {
-      technicalAnalysis = sections[0].replace(/1\.\s+\*\*Análise Técnica\*\*/i, "").trim();
+      technicalAnalysis = sections[0].replace(/1\.\s+\*\*Análise Técnica\*\*/i, '').trim();
       actionPlan = sections[1].trim();
     }
-
     return { technicalAnalysis, actionPlan };
   } catch (error: any) {
-    console.error("Erro ao chamar Cloud Function (Análise de Log):", error);
-    
-    if (error.code === "unauthenticated") {
-      return "Erro: Você precisa estar logado para realizar esta ação.";
-    }
-    
-    return `Erro ao analisar log com IA: ${error.message || "Erro desconhecido"}`;
+    console.error('Erro ao analisar log com IA:', error);
+    return `Erro ao analisar log com IA: ${error?.message || 'Erro desconhecido'}`;
   }
 }
