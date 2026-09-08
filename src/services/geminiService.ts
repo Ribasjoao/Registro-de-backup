@@ -68,17 +68,20 @@ export async function parseBackupPdf(
       if (resJson.success && resJson.data) {
         return resJson.data as ParsedBackupReport;
       }
-    } else if (response.status !== 404 && response.status !== 405) {
-      // Erro real retornado pelo backend (ex: erro de formato ou chave de API)
+    } else {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `Falha no servidor (Código ${response.status}) ao analisar o PDF.`);
+      const message = errData.error || `Falha no servidor (Código ${response.status}) ao analisar o PDF.`;
+      // Se o servidor respondeu com status 500, 502, 503, 400 ou 401, esse é o diagnóstico real do backend
+      if (response.status !== 404 && response.status !== 405) {
+        throw new Error(message);
+      }
     }
   } catch (apiErr: any) {
-    // Se o erro já é uma mensagem explicativa de negócio, repassa a menos que seja 404/405/Network
+    // Se a mensagem já é um erro direto da rota (ex: 500, 503, etc), propaga diretamente para o usuário
     if (apiErr.message && !apiErr.message.includes("404") && !apiErr.message.includes("405") && !apiErr.message.includes("Failed to fetch")) {
       throw apiErr;
     }
-    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou, verificando fallbacks alternativos...", apiErr);
+    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou (404/405/Rede), verificando fallbacks...", apiErr);
   }
 
   // 2. Fallback Secundário: Firebase Cloud Functions (se disponível no ambiente)

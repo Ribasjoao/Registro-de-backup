@@ -64,8 +64,8 @@ Sua missão:
 Retorne os dados em formato JSON estrito conforme o schema definido. Todos os textos em Português do Brasil.
 `;
 
-    // Modelos com suporte multimodal a documentos PDF em ordem de prioridade para alta disponibilidade
-    const candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    // Modelos com suporte multimodal a documentos PDF
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
     let responseText = '';
     let lastError: any = null;
 
@@ -167,7 +167,7 @@ Retorne os dados em formato JSON estrito conforme o schema definido. Todos os te
       } catch (err: any) {
         lastError = err;
         console.warn(`Tentativa com modelo ${modelName} retornou erro:`, err?.message || err);
-        // Se for erro de alta demanda (503 / UNAVAILABLE), tenta imediatamente o próximo modelo
+        // Se o erro for temporário de carga (503 / UNAVAILABLE), tenta o próximo candidato
         const isUnavailable = err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('high demand') || err?.message?.includes('UNAVAILABLE');
         if (!isUnavailable) {
           throw err;
