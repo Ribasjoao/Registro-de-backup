@@ -692,7 +692,7 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             <p className="text-xs text-text-secondary mt-1">Divisão proporcional por status das rotinas de backup</p>
           </div>
           
-          <div className="flex-1 min-h-[170px] min-w-0 relative mt-2">
+          <div className="h-[190px] w-full min-w-0 relative mt-2">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie

@@ -53,6 +53,19 @@ Adicione os seguintes nomes e seus respectivos valores:
 | `VITE_FIREBASE_APP_ID` | `appId` |
 | `VITE_FIREBASE_MEASUREMENT_ID` | `measurementId` |
 | `VITE_FIREBASE_FIRESTORE_DATABASE_ID` | `firestoreDatabaseId` (comumente `(default)`) |
+| `GEMINI_API_KEY` | Sua chave da API Gemini (Google AI Studio) para análise de PDF e relatórios semanais |
+| `VITE_GEMINI_API_KEY` | *(Opcional)* A mesma chave da API Gemini para fallback direto no navegador |
+
+---
+
+## 🤖 3. Funções Serverless de IA no Vercel (`/api/*`)
+
+A aplicação inclui rotas serverless nativas para o Vercel dentro do diretório `/api/`:
+- `/api/ai/parse-backup-pdf`: Extração inteligente e diagnóstico de relatórios em PDF.
+- `/api/ai/generate-weekly-report`: Geração de parecer executivo semanal consolidado.
+- `/api/ai/analyze-log`: Diagnóstico técnico de logs de erro e planos de ação.
+
+Essas rotas utilizam a variável de ambiente `GEMINI_API_KEY` configurada no painel do Vercel de forma segura e sem expor credenciais ao usuário.
 
 ---
 
@@ -64,12 +77,19 @@ Configuramos o arquivo `vercel.json` na raiz da seguinte forma:
   "name": "registro-de-backup",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
 }
 ```
+Isso garante que:
+1. Chamadas de API (`/api/*`) são encaminhadas diretamente para as funções serverless de IA sem redirecionamento.
+2. Rotas do frontend (como `/records`, `/dashboard`, `/clients`) são direcionadas para o Single Page Application (`index.html`) sem causar erros 404 ou 405.
 Isso garante que, ao usar abas complexas, relatórios ou atualizar a página direto em sub-rotas como `/records`, o sistema do Vercel redirecione internamente para o roteamento inteligente do React no lado do cliente, evitando o erro `404 Not Found` típico de SPAs!
 
 E prontinho! Seu Registro de Backup estará online instantaneamente com um domínio amigável `https://registro-de-backup.vercel.app` (ou semelhante) e com zero custos!

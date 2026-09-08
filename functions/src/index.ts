@@ -233,3 +233,94 @@ export const analyzeBackupLog = functions.https.onCall(async (data, context) => 
     );
   }
 });
+
+export const parseBackupPdf = functions.runWith({
+  timeoutSeconds: 120,
+  memory: "1GB",
+}).https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "O usuário deve estar autenticado para analisar PDFs."
+    );
+  }
+
+  const { pdfBase64, filename, knownClients } = data;
+  if (!pdfBase64 || typeof pdfBase64 !== "string") {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Arquivo PDF ausente ou formato inválido."
+    );
+  }
+
+  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, "").trim();
+  if (!cleanBase64) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Conteúdo Base64 do PDF está vazio."
+    );
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Configuração do servidor incompleta (API Key ausente)."
+    );
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  const clientsContext = Array.isArray(knownClients) && knownClients.length > 0
+    ? `Clientes já cadastrados no sistema para referência: ${knownClients.join(", ")}.\nSe o relatório pertencer a um destes clientes, use exatamente a grafia existente.`
+    : "";
+
+  const prompt = `
+Você é um Arquiteto Sênior de Infraestrutura de TI e Especialista em Sistemas de Backup.
+Analise atentamente o relatório em PDF anexado (nome do arquivo: "${filename || 'relatorio.pdf'}").
+
+${clientsContext}
+
+Sua missão:
+1. Extrair os metadados do backup (nome do cliente/empresa, data/hora da execução e status geral).
+2. Identificar todos os jobs/tarefas executados contidos no documento.
+3. Para cada job com aviso ("warning") ou falha ("failed"), extraia o código de erro exato, faça uma análise técnica detalhada da causa raiz e forneça um plano de ação prático e resolutivo.
+4. Sugira a criticidade (low, medium, high, critical) e o impacto operacional (low, medium, high).
+
+Retorne os dados em formato JSON estrito. Todos os textos em Português do Brasil.
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: [
+        {
+          inlineData: {
+            mimeType: "application/pdf",
+            data: cleanBase64,
+          },
+        },
+        {
+          text: prompt,
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const text = response.text?.trim();
+    if (!text) {
+      throw new Error("Resposta vazia do modelo.");
+    }
+
+    const parsedData = JSON.parse(text);
+    return { success: true, data: parsedData };
+  } catch (error: any) {
+    console.error("Erro no Gemini (Parse PDF):", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      `Erro ao processar o PDF com o Gemini: ${error?.message || "Erro desconhecido"}`
+    );
+  }
+});
+
