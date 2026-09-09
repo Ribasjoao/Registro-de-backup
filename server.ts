@@ -27,6 +27,15 @@ function getGenAI(): GoogleGenAI {
   return genAIClient;
 }
 
+// Modelos multimodais candidatos com cotas independentes na API Gemini
+const candidateModels = [
+  'gemini-2.5-flash',
+  'gemini-flash-latest',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-3.8-flash',
+];
+
 // Middleware de autenticação segura via Bearer Token
 async function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
@@ -125,97 +134,117 @@ Sua missão:
 Retorne os dados em formato JSON estrito conforme o schema definido. Todos os textos em Português do Brasil.
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: [
-          {
-            inlineData: {
-              mimeType: 'application/pdf',
-              data: cleanBase64,
-            },
-          },
-          {
-            text: prompt,
-          },
-        ],
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              clientName: {
-                type: Type.STRING,
-                description: 'Nome da empresa, cliente ou servidor identificado no relatório',
-              },
-              backupDate: {
-                type: Type.STRING,
-                description: 'Data do backup identificada no relatório no formato ISO (YYYY-MM-DDTHH:mm:ss) ou YYYY-MM-DD',
-              },
-              overallStatus: {
-                type: Type.STRING,
-                enum: ['success', 'warning', 'failed'],
-                description: 'Status consolidado do backup (failed se houve erros críticos, warning se houve alertas, success se tudo OK)',
-              },
-              summary: {
-                type: Type.STRING,
-                description: 'Breve resumo executivo em 1 ou 2 frases sobre o resultado do backup',
-              },
-              jobs: {
-                type: Type.ARRAY,
-                description: 'Lista de tarefas ou jobs identificados no relatório',
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: {
-                      type: Type.STRING,
-                      description: 'Nome da tarefa ou VM/servidor de backup (ex: Backup VM-DC01, Arquivos Financeiro)',
-                    },
-                    backupType: {
-                      type: Type.STRING,
-                      enum: ['LOCAL', 'CLOUD'],
-                      description: 'Destino do backup (LOCAL ou CLOUD)',
-                    },
-                    status: {
-                      type: Type.STRING,
-                      enum: ['success', 'warning', 'failed'],
-                      description: 'Status deste job específico',
-                    },
-                    technicalAnalysis: {
-                      type: Type.STRING,
-                      description: 'Diagnóstico técnico da falha/erro ou confirmação de sucesso com detalhes',
-                    },
-                    actionPlan: {
-                      type: Type.STRING,
-                      description: 'Passos recomendados para resolução imediata do erro (se aplicável)',
-                    },
-                    criticality: {
-                      type: Type.STRING,
-                      enum: ['low', 'medium', 'high', 'critical'],
-                      description: 'Gravidade do incidente',
-                    },
-                    rootCause: {
-                      type: Type.STRING,
-                      enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
-                      description: 'Categoria da causa raiz identificada',
-                    },
-                    impact: {
-                      type: Type.STRING,
-                      enum: ['low', 'medium', 'high'],
-                      description: 'Impacto operacional nos dados do cliente',
-                    },
-                  },
-                  required: ['title', 'backupType', 'status'],
+      let responseText = '';
+      let lastError: any = null;
+
+      for (const modelName of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: [
+              {
+                inlineData: {
+                  mimeType: 'application/pdf',
+                  data: cleanBase64,
                 },
               },
+              {
+                text: prompt,
+              },
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  clientName: {
+                    type: Type.STRING,
+                    description: 'Nome da empresa, cliente ou servidor identificado no relatório',
+                  },
+                  backupDate: {
+                    type: Type.STRING,
+                    description: 'Data do backup identificada no relatório no formato ISO (YYYY-MM-DDTHH:mm:ss) ou YYYY-MM-DD',
+                  },
+                  overallStatus: {
+                    type: Type.STRING,
+                    enum: ['success', 'warning', 'failed'],
+                    description: 'Status consolidado do backup (failed se houve erros críticos, warning se houve alertas, success se tudo OK)',
+                  },
+                  summary: {
+                    type: Type.STRING,
+                    description: 'Breve resumo executivo em 1 ou 2 frases sobre o resultado do backup',
+                  },
+                  jobs: {
+                    type: Type.ARRAY,
+                    description: 'Lista de tarefas ou jobs identificados no relatório',
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        title: {
+                          type: Type.STRING,
+                          description: 'Nome da tarefa ou VM/servidor de backup (ex: Backup VM-DC01, Arquivos Financeiro)',
+                        },
+                        backupType: {
+                          type: Type.STRING,
+                          enum: ['LOCAL', 'CLOUD'],
+                          description: 'Destino do backup (LOCAL ou CLOUD)',
+                        },
+                        status: {
+                          type: Type.STRING,
+                          enum: ['success', 'warning', 'failed'],
+                          description: 'Status deste job específico',
+                        },
+                        technicalAnalysis: {
+                          type: Type.STRING,
+                          description: 'Diagnóstico técnico da falha/erro ou confirmação de sucesso com detalhes',
+                        },
+                        actionPlan: {
+                          type: Type.STRING,
+                          description: 'Passos recomendados para resolução imediata do erro (se aplicável)',
+                        },
+                        criticality: {
+                          type: Type.STRING,
+                          enum: ['low', 'medium', 'high', 'critical'],
+                          description: 'Gravidade do incidente',
+                        },
+                        rootCause: {
+                          type: Type.STRING,
+                          enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
+                          description: 'Categoria da causa raiz identificada',
+                        },
+                        impact: {
+                          type: Type.STRING,
+                          enum: ['low', 'medium', 'high'],
+                          description: 'Impacto operacional nos dados do cliente',
+                        },
+                      },
+                      required: ['title', 'backupType', 'status'],
+                    },
+                  },
+                },
+                required: ['clientName', 'overallStatus', 'summary', 'jobs'],
+              },
             },
-            required: ['clientName', 'overallStatus', 'summary', 'jobs'],
-          },
-        },
-      });
+          });
 
-      const responseText = response.text?.trim();
+          const text = response.text?.trim();
+          if (text) {
+            responseText = text;
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Tentativa com modelo ${modelName} retornou erro:`, err?.message || err);
+        }
+      }
+
       if (!responseText) {
-        return res.status(502).json({ error: 'A IA não retornou uma resposta válida para o documento enviado.' });
+        if (lastError?.message?.includes('Quota exceeded') || lastError?.message?.includes('rate-limit') || lastError?.status === 429) {
+          return res.status(429).json({
+            error: 'Limite de requisições por minuto da cota gratuita atingido. Aguarde cerca de 10 a 15 segundos e tente novamente.',
+          });
+        }
+        return res.status(502).json({ error: lastError?.message || 'A IA não retornou uma resposta válida para o documento enviado.' });
       }
 
       const parsedData = JSON.parse(responseText);
@@ -247,33 +276,45 @@ ${log}
 """
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              technicalAnalysis: { type: Type.STRING, description: 'Análise técnica da causa raiz do erro' },
-              actionPlan: { type: Type.STRING, description: 'Plano de ação prático e passos para resolver' },
-              suggestedRootCause: {
-                type: Type.STRING,
-                enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
-              },
-              suggestedCriticality: {
-                type: Type.STRING,
-                enum: ['low', 'medium', 'high', 'critical'],
+      let text = '';
+      let lastErr: any = null;
+      for (const m of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: m,
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  technicalAnalysis: { type: Type.STRING, description: 'Análise técnica da causa raiz do erro' },
+                  actionPlan: { type: Type.STRING, description: 'Plano de ação prático e passos para resolver' },
+                  suggestedRootCause: {
+                    type: Type.STRING,
+                    enum: ['hardware', 'network', 'storage', 'permission', 'software', 'other'],
+                  },
+                  suggestedCriticality: {
+                    type: Type.STRING,
+                    enum: ['low', 'medium', 'high', 'critical'],
+                  },
+                },
+                required: ['technicalAnalysis', 'actionPlan'],
               },
             },
-            required: ['technicalAnalysis', 'actionPlan'],
-          },
-        },
-      });
+          });
+          const resT = response.text?.trim();
+          if (resT) {
+            text = resT;
+            break;
+          }
+        } catch (e: any) {
+          lastErr = e;
+        }
+      }
 
-      const text = response.text?.trim();
       if (!text) {
-        return res.status(502).json({ error: 'Falha ao obter diagnóstico da IA.' });
+        return res.status(502).json({ error: lastErr?.message || 'Falha ao obter diagnóstico da IA.' });
       }
 
       return res.json(JSON.parse(text));
@@ -308,14 +349,26 @@ O relatório deve conter:
 Formato: Retorne um texto estruturado em Markdown elegante e profissional em Português do Brasil.
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-      });
+      let text = '';
+      let lastErr: any = null;
+      for (const m of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: m,
+            contents: prompt,
+          });
+          const resT = response.text?.trim();
+          if (resT) {
+            text = resT;
+            break;
+          }
+        } catch (e: any) {
+          lastErr = e;
+        }
+      }
 
-      const text = response.text?.trim();
       if (!text) {
-        return res.status(502).json({ error: 'Falha ao obter relatório da IA.' });
+        return res.status(502).json({ error: lastErr?.message || 'Falha ao obter relatório da IA.' });
       }
 
       return res.json({ success: true, text });

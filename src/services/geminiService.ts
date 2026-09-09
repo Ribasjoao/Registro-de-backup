@@ -123,54 +123,68 @@ Sua missão:
 Retorne os dados em formato JSON estrito. Todos os textos em Português do Brasil.
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: [
-          {
-            inlineData: {
-              mimeType: "application/pdf",
-              data: cleanBase64,
-            },
-          },
-          {
-            text: prompt,
-          },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              clientName: { type: Type.STRING },
-              backupDate: { type: Type.STRING },
-              overallStatus: { type: Type.STRING, enum: ["success", "warning", "failed"] },
-              summary: { type: Type.STRING },
-              jobs: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING },
-                    backupType: { type: Type.STRING, enum: ["LOCAL", "CLOUD"] },
-                    status: { type: Type.STRING, enum: ["success", "warning", "failed"] },
-                    technicalAnalysis: { type: Type.STRING },
-                    actionPlan: { type: Type.STRING },
-                    criticality: { type: Type.STRING, enum: ["low", "medium", "high", "critical"] },
-                    rootCause: { type: Type.STRING, enum: ["hardware", "network", "storage", "permission", "software", "other"] },
-                    impact: { type: Type.STRING, enum: ["low", "medium", "high"] },
-                  },
-                  required: ["title", "backupType", "status"],
+      const candidateModels = [
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-3.8-flash",
+      ];
+
+      for (const modelName of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: [
+              {
+                inlineData: {
+                  mimeType: "application/pdf",
+                  data: cleanBase64,
                 },
               },
+              {
+                text: prompt,
+              },
+            ],
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  clientName: { type: Type.STRING },
+                  backupDate: { type: Type.STRING },
+                  overallStatus: { type: Type.STRING, enum: ["success", "warning", "failed"] },
+                  summary: { type: Type.STRING },
+                  jobs: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        title: { type: Type.STRING },
+                        backupType: { type: Type.STRING, enum: ["LOCAL", "CLOUD"] },
+                        status: { type: Type.STRING, enum: ["success", "warning", "failed"] },
+                        technicalAnalysis: { type: Type.STRING },
+                        actionPlan: { type: Type.STRING },
+                        criticality: { type: Type.STRING, enum: ["low", "medium", "high", "critical"] },
+                        rootCause: { type: Type.STRING, enum: ["hardware", "network", "storage", "permission", "software", "other"] },
+                        impact: { type: Type.STRING, enum: ["low", "medium", "high"] },
+                      },
+                      required: ["title", "backupType", "status"],
+                    },
+                  },
+                },
+                required: ["clientName", "backupDate", "overallStatus", "summary", "jobs"],
+              },
             },
-            required: ["clientName", "backupDate", "overallStatus", "summary", "jobs"],
-          },
-        },
-      });
+          });
 
-      const text = response.text?.trim();
-      if (text) {
-        return JSON.parse(text) as ParsedBackupReport;
+          const text = response.text?.trim();
+          if (text) {
+            return JSON.parse(text) as ParsedBackupReport;
+          }
+        } catch (modelErr: any) {
+          console.warn(`Tentativa direta cliente com ${modelName} falhou:`, modelErr?.message || modelErr);
+        }
       }
     } catch (clientErr: any) {
       console.error("Falha no processamento direto com VITE_GEMINI_API_KEY:", clientErr);

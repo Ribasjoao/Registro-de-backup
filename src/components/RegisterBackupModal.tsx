@@ -551,6 +551,7 @@ export function RegisterBackupModal({
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleFileUpload(file);
+                    e.target.value = '';
                   }} 
                 />
                 <div className="w-10 h-10 rounded-xl bg-bg-main border border-border-main/50 flex items-center justify-center text-brand shrink-0 shadow-inner">

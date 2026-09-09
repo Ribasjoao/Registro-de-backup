@@ -64,9 +64,14 @@ Sua missão:
 Retorne os dados em formato JSON estrito conforme o schema definido. Todos os textos em Português do Brasil.
 `;
 
-    // Modelos com suporte multimodal a documentos PDF
-    // gemini-3.8-flash possui cota separada de gemini-flash-latest e gemini-3.1-pro-preview
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
+    // Modelos com suporte multimodal a documentos PDF e cotas gratuitas independentes
+    const candidateModels = [
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-3.8-flash',
+    ];
     let responseText = '';
     let lastError: any = null;
 
@@ -168,21 +173,7 @@ Retorne os dados em formato JSON estrito conforme o schema definido. Todos os te
       } catch (err: any) {
         lastError = err;
         console.warn(`Tentativa com modelo ${modelName} retornou erro:`, err?.message || err);
-        // Se o erro for temporário de carga (503 / UNAVAILABLE) ou limite de requisições por minuto da cota gratuita (429 / RESOURCE_EXHAUSTED), tenta o próximo modelo que tem pool de cota separado
-        const isQuotaOrUnavailable = 
-          err?.status === 503 || 
-          err?.status === 429 ||
-          err?.message?.includes('503') || 
-          err?.message?.includes('429') || 
-          err?.message?.includes('Quota exceeded') ||
-          err?.message?.includes('rate-limit') ||
-          err?.message?.includes('RESOURCE_EXHAUSTED') ||
-          err?.message?.includes('high demand') || 
-          err?.message?.includes('UNAVAILABLE');
-
-        if (!isQuotaOrUnavailable) {
-          throw err;
-        }
+        // Continua tentando os outros modelos da lista com cotas separadas
       }
     }
 
