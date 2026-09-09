@@ -22,18 +22,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: node-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-22-
+          cache: 'npm'
 
       - name: Install Dependencies
-        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Run Linter
@@ -51,18 +42,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: node-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-22-
+          cache: 'npm'
 
       - name: Install Dependencies
-        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Run Type Check
@@ -80,18 +62,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: node-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-22-
+          cache: 'npm'
 
       - name: Install Dependencies
-        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Run Vitest with Coverage
@@ -116,19 +89,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: node-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-22-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-22-
+          cache: 'npm'
 
       - name: Install Dependencies
-        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Build Production Bundle
         run: npm run build
+
