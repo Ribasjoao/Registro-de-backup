@@ -74,25 +74,13 @@ export async function parseBackupPdf(
     } else {
       const errData = await response.json().catch(() => ({}));
       const message = errData.error || `Servidor retornou código ${response.status}`;
-      console.warn(`Tentativa de API /api/ai/parse-backup-pdf retornou status ${response.status}: ${message}. Acionando contingência...`);
+      console.warn(`Tentativa de API /api/ai/parse-backup-pdf retornou status ${response.status}: ${message}. Acionando leitor inteligente de contingência...`);
     }
   } catch (apiErr: any) {
-    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou, acionando rotas de contingência...", apiErr?.message || apiErr);
+    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou, acionando leitor inteligente de contingência...", apiErr?.message || apiErr);
   }
 
-  // 2. Fallback Secundário: Firebase Cloud Functions (se disponível no ambiente)
-  try {
-    const parseFn = httpsCallable(functions, "parseBackupPdf");
-    const result = await parseFn({ pdfBase64, filename: file.name, knownClients });
-    const data = result.data as { success: boolean; data: ParsedBackupReport };
-    if (data?.data) {
-      return data.data;
-    }
-  } catch (fnErr: any) {
-    console.warn("Fallback de Firebase Cloud Function não disponível:", fnErr?.message);
-  }
-
-  // 3. Fallback Terciário: Chave de API Gemini direta no cliente (caso configurada em VITE_GEMINI_API_KEY no Vercel)
+  // 2. Fallback Secundário: Chave de API Gemini direta no cliente (caso configurada em VITE_GEMINI_API_KEY no Vercel)
   const clientKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (clientKey) {
     try {
