@@ -73,20 +73,11 @@ export async function parseBackupPdf(
       }
     } else {
       const errData = await response.json().catch(() => ({}));
-      const message = errData.error || `Falha no servidor (Código ${response.status}) ao analisar o PDF.`;
-      // Se o servidor respondeu com 429 (cota), permitimos que o fallback local assuma sem estourar erro vermelho
-      if (response.status === 429 || message.toLowerCase().includes('cota') || message.toLowerCase().includes('quota')) {
-        console.warn("Cota da API Gemini esgotada no servidor, acionando leitor inteligente de contingência...");
-      } else if (response.status !== 404 && response.status !== 405) {
-        throw new Error(message);
-      }
+      const message = errData.error || `Servidor retornou código ${response.status}`;
+      console.warn(`Tentativa de API /api/ai/parse-backup-pdf retornou status ${response.status}: ${message}. Acionando contingência...`);
     }
   } catch (apiErr: any) {
-    // Se a mensagem já é um erro direto da rota (ex: 500, 503, etc), propaga diretamente para o usuário
-    if (apiErr.message && !apiErr.message.includes("404") && !apiErr.message.includes("405") && !apiErr.message.includes("429") && !apiErr.message.includes("cota") && !apiErr.message.includes("Failed to fetch")) {
-      throw apiErr;
-    }
-    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou (404/405/Rede/Cota), verificando fallbacks...", apiErr);
+    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou, acionando rotas de contingência...", apiErr?.message || apiErr);
   }
 
   // 2. Fallback Secundário: Firebase Cloud Functions (se disponível no ambiente)

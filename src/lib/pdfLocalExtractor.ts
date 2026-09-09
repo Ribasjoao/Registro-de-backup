@@ -1,4 +1,4 @@
-import { ParsedBackupReport, ParsedJobItem } from '../services/geminiService';
+import type { ParsedBackupReport, ParsedJobItem } from '../types';
 
 /**
  * Normaliza string removendo acentos e caracteres especiais para matching tolerante

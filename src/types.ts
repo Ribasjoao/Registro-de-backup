@@ -151,3 +151,24 @@ export interface Activity {
   };
 }
 
+export interface ParsedJobItem {
+  title: string;
+  backupType: 'LOCAL' | 'CLOUD';
+  status: 'success' | 'warning' | 'failed';
+  technicalAnalysis?: string;
+  actionPlan?: string;
+  criticality?: 'low' | 'medium' | 'high' | 'critical';
+  rootCause?: 'hardware' | 'network' | 'storage' | 'permission' | 'software' | 'service' | 'other';
+  impact?: 'low' | 'medium' | 'high';
+}
+
+export interface ParsedBackupReport {
+  clientName: string;
+  backupDate: string;
+  overallStatus: 'success' | 'warning' | 'failed';
+  summary: string;
+  jobs: ParsedJobItem[];
+  isLocalFallback?: boolean;
+  warning?: string;
+}
+

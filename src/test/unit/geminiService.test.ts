@@ -92,18 +92,21 @@ describe('Gemini Service - Leitura e Diagnóstico de PDF', () => {
     expect(result.jobs.length).toBeGreaterThan(0);
   });
 
-  it('deve lançar erro amigável se a resposta do servidor retornar erro 500', async () => {
+  it('deve acionar fallback local inteligente se a resposta do servidor retornar erro 500 (Vercel ou rede)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       json: async () => ({
-        error: 'Erro na análise do PDF com IA'
+        error: 'Falha interna no servidor'
       })
     } as any);
 
-    const dummyBlob = new Blob(['%PDF-1.4 fake'], { type: 'application/pdf' });
-    const dummyFile = new File([dummyBlob], 'teste.pdf', { type: 'application/pdf' });
+    const dummyBlob = new Blob(['Job: Backup VM-DC01 Status: Success'], { type: 'application/pdf' });
+    const dummyFile = new File([dummyBlob], 'Relatorio_Clinica_Alfa.pdf', { type: 'application/pdf' });
 
-    await expect(parseBackupPdf(dummyFile)).rejects.toThrow('Erro na análise do PDF com IA');
+    const result = await parseBackupPdf(dummyFile, ['Clinica Alfa']);
+    expect(result).toBeDefined();
+    expect(result.clientName).toBe('Clinica Alfa');
+    expect(result.isLocalFallback).toBe(true);
   });
 });

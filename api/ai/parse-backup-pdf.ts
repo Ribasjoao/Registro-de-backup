@@ -1,5 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
-import { extractTextFromPdfBase64, heuristicParsePdf } from '../../src/lib/pdfLocalExtractor';
+import { extractTextFromPdfBase64, heuristicParsePdf } from '../_lib/pdfExtractor';
 
 export const config = {
   maxDuration: 60,
@@ -24,9 +23,15 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
   }
 
+  let filename = '';
+  let knownClients: string[] = [];
+  let extractedText = '';
+
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-    const { pdfBase64, filename, knownClients } = body;
+    const pdfBase64 = body.pdfBase64;
+    filename = body.filename || '';
+    knownClients = Array.isArray(body.knownClients) ? body.knownClients : [];
 
     if (!pdfBase64 || typeof pdfBase64 !== 'string') {
       return res.status(400).json({ error: 'Arquivo PDF ausente ou formato inválido.' });
@@ -38,23 +43,41 @@ export default async function handler(req: any, res: any) {
     }
 
     // 1. Extração prévia de texto para economizar até 98% dos tokens da cota gratuita
-    const extractedText = extractTextFromPdfBase64(cleanBase64, filename);
+    extractedText = extractTextFromPdfBase64(cleanBase64, filename);
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      // Se não há chave configurada, utiliza o leitor local heurístico diretamente
+      // Se não há chave configurada no painel da Vercel, utiliza o leitor local heurístico diretamente
       const localData = heuristicParsePdf(extractedText, filename, knownClients);
       return res.status(200).json({
         success: true,
         data: localData,
         isLocalFallback: true,
-        warning: 'Chave Gemini ausente. Relatório extraído com sucesso pelo leitor local inteligente.',
+        warning: 'Chave GEMINI_API_KEY ausente na Vercel. Relatório extraído com sucesso pelo leitor local inteligente.',
+      });
+    }
+
+    // Carregamento dinâmico e tolerante do SDK @google/genai
+    let GoogleGenAI: any;
+    let Type: any;
+    try {
+      const genaiModule = await import('@google/genai');
+      GoogleGenAI = genaiModule.GoogleGenAI;
+      Type = genaiModule.Type;
+    } catch (sdkErr: any) {
+      console.warn('SDK @google/genai não pôde ser carregado no runtime serverless:', sdkErr?.message);
+      const localData = heuristicParsePdf(extractedText, filename, knownClients);
+      return res.status(200).json({
+        success: true,
+        data: localData,
+        isLocalFallback: true,
+        warning: 'Ambiente Serverless operando com leitor local inteligente.',
       });
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const clientsContext = Array.isArray(knownClients) && knownClients.length > 0
+    const clientsContext = knownClients.length > 0
       ? `Clientes já cadastrados no sistema para referência: ${knownClients.join(', ')}.\nSe o relatório pertencer a um destes clientes, use exatamente a grafia existente.`
       : '';
 
