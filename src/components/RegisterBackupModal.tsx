@@ -308,6 +308,8 @@ export function RegisterBackupModal({
 
       if (errMsg.includes('high demand') || errMsg.includes('503') || errMsg.includes('UNAVAILABLE')) {
         errMsg = 'A API Gemini está com alta demanda momentânea no Google. Por favor, tente enviar novamente em alguns segundos.';
+      } else if (errMsg.includes('Quota exceeded') || errMsg.includes('rate-limit') || errMsg.includes('429')) {
+        errMsg = 'Limite de requisições por minuto da cota gratuita atingido. Aguarde cerca de 10 a 15 segundos e tente reenviar o PDF.';
       }
       toast.error(`Falha ao processar PDF: ${errMsg}`, { id: loadingToast, duration: 6000 });
     } finally {

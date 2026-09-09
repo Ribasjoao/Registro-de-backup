@@ -65,7 +65,8 @@ Retorne os dados em formato JSON estrito conforme o schema definido. Todos os te
 `;
 
     // Modelos com suporte multimodal a documentos PDF
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    // gemini-3.8-flash possui cota separada de gemini-flash-latest e gemini-3.1-pro-preview
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
     let responseText = '';
     let lastError: any = null;
 
@@ -167,15 +168,30 @@ Retorne os dados em formato JSON estrito conforme o schema definido. Todos os te
       } catch (err: any) {
         lastError = err;
         console.warn(`Tentativa com modelo ${modelName} retornou erro:`, err?.message || err);
-        // Se o erro for temporário de carga (503 / UNAVAILABLE), tenta o próximo candidato
-        const isUnavailable = err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('high demand') || err?.message?.includes('UNAVAILABLE');
-        if (!isUnavailable) {
+        // Se o erro for temporário de carga (503 / UNAVAILABLE) ou limite de requisições por minuto da cota gratuita (429 / RESOURCE_EXHAUSTED), tenta o próximo modelo que tem pool de cota separado
+        const isQuotaOrUnavailable = 
+          err?.status === 503 || 
+          err?.status === 429 ||
+          err?.message?.includes('503') || 
+          err?.message?.includes('429') || 
+          err?.message?.includes('Quota exceeded') ||
+          err?.message?.includes('rate-limit') ||
+          err?.message?.includes('RESOURCE_EXHAUSTED') ||
+          err?.message?.includes('high demand') || 
+          err?.message?.includes('UNAVAILABLE');
+
+        if (!isQuotaOrUnavailable) {
           throw err;
         }
       }
     }
 
     if (!responseText) {
+      if (lastError?.message?.includes('Quota exceeded') || lastError?.message?.includes('rate-limit') || lastError?.status === 429) {
+        return res.status(429).json({
+          error: 'Limite de requisições por minuto da cota gratuita atingido. Aguarde cerca de 10 a 15 segundos e reenvie.',
+        });
+      }
       if (lastError?.message?.includes('high demand') || lastError?.status === 503) {
         return res.status(503).json({
           error: 'Os servidores da Google API estão com alta demanda temporária neste momento. Por favor, aguarde alguns instantes e tente novamente.',
