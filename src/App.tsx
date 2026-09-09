@@ -71,6 +71,8 @@ import {
 import { useTasks } from './hooks/useTasks';
 import { Client, BackupRecord, StorageDestination, BackupType, AppUser, Task, Activity } from './types';
 import { logAction } from './services/auditService';
+import { logBackupAuditActivity, logNewClientActivity, seedActivitiesIfEmpty } from './services/activityService';
+import { seedInitialDataIfEmpty } from './services/seedService';
 
 // Migrate old 'gate7_cache_*' keys to 'registro_backup_cache_*'
 (() => {
@@ -480,9 +482,11 @@ export default function App() {
   // Trigger seeding of clients and core data if empty
   useEffect(() => {
     if (loadedStates.clients && clients.length === 0) {
-      import('./services/seedService').then(({ seedInitialDataIfEmpty }) => {
+      try {
         seedInitialDataIfEmpty();
-      });
+      } catch (seedErr) {
+        console.error('Error seeding initial data:', seedErr);
+      }
     }
   }, [loadedStates.clients, clients.length]);
 
@@ -491,9 +495,11 @@ export default function App() {
     if (loadedStates.backups && loadedStates.clients && loadedStates.users && loadedStates.activities) {
       if (activities.length === 0 && backups.length > 0 && !isSeedingRef.current) {
         isSeedingRef.current = true;
-        import('./services/activityService').then(({ seedActivitiesIfEmpty }) => {
+        try {
           seedActivitiesIfEmpty(backups, clients, users);
-        });
+        } catch (seedErr) {
+          console.error('Error running seedActivitiesIfEmpty:', seedErr);
+        }
       }
     }
   }, [loadedStates.backups, loadedStates.clients, loadedStates.users, loadedStates.activities, activities.length, backups, clients, users]);
@@ -515,13 +521,16 @@ export default function App() {
           `Adicionou o cliente "${name}"`
         );
 
-        // Log real-time activity
-        const { logNewClientActivity } = await import('./services/activityService');
-        await logNewClientActivity(
-          appUser?.displayName || user.displayName || user.email || 'Admin',
-          appUser?.photoURL || user.photoURL || undefined,
-          name
-        );
+        // Log real-time activity safely
+        try {
+          await logNewClientActivity(
+            appUser?.displayName || user.displayName || user.email || 'Admin',
+            appUser?.photoURL || user.photoURL || undefined,
+            name
+          );
+        } catch (actErr) {
+          console.warn('Error logging new client activity:', actErr);
+        }
       }
     } catch (error) {
       toast.error('Erro ao adicionar cliente.', { id: toastId });
@@ -587,17 +596,20 @@ export default function App() {
           `Registrou backup "${backup.title}" para o cliente "${backup.client}" (${backup.status.toUpperCase()})`
         );
 
-        // Log real-time activity
-        const { logBackupAuditActivity } = await import('./services/activityService');
-        await logBackupAuditActivity(
-          appUser?.displayName || user.displayName || user.email || 'Usuário',
-          appUser?.photoURL || user.photoURL || undefined,
-          backup.client,
-          1,
-          backup.status === 'success' ? 1 : 0,
-          backup.status === 'warning' ? 1 : 0,
-          backup.status === 'failed' ? 1 : 0
-        );
+        // Log real-time activity safely
+        try {
+          await logBackupAuditActivity(
+            appUser?.displayName || user.displayName || user.email || 'Usuário',
+            appUser?.photoURL || user.photoURL || undefined,
+            backup.client,
+            1,
+            backup.status === 'success' ? 1 : 0,
+            backup.status === 'warning' ? 1 : 0,
+            backup.status === 'failed' ? 1 : 0
+          );
+        } catch (actErr) {
+          console.warn('Error logging backup audit activity:', actErr);
+        }
       }
 
       // Auto-task for failed backups
@@ -922,22 +934,25 @@ export default function App() {
               `Registrou lote de ${backupData.length} backups para o cliente "${backupData[0].client}"`
             );
 
-            // Log real-time activity
-            const { logBackupAuditActivity } = await import('./services/activityService');
-            const total = backupData.length;
-            const success = backupData.filter(b => b.status === 'success').length;
-            const warning = backupData.filter(b => b.status === 'warning').length;
-            const failed = backupData.filter(b => b.status === 'failed').length;
-            const clientName = backupData[0]?.client || 'Geral';
-            await logBackupAuditActivity(
-              appUser?.displayName || user.displayName || user.email || 'Usuário',
-              appUser?.photoURL || user.photoURL || undefined,
-              clientName,
-              total,
-              success,
-              warning,
-              failed
-            );
+            // Log real-time activity safely
+            try {
+              const total = backupData.length;
+              const success = backupData.filter(b => b.status === 'success').length;
+              const warning = backupData.filter(b => b.status === 'warning').length;
+              const failed = backupData.filter(b => b.status === 'failed').length;
+              const clientName = backupData[0]?.client || 'Geral';
+              await logBackupAuditActivity(
+                appUser?.displayName || user.displayName || user.email || 'Usuário',
+                appUser?.photoURL || user.photoURL || undefined,
+                clientName,
+                total,
+                success,
+                warning,
+                failed
+              );
+            } catch (actErr) {
+              console.warn('Error logging batch backup audit activity:', actErr);
+            }
           }
         } catch (error) {
           toast.error('Erro ao registrar lote de backups.', { id: toastId });

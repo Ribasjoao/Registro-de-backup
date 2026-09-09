@@ -16,6 +16,7 @@ import { generateRecurrentTasks } from '../lib/taskService';
 import { useGamification } from './useGamification';
 import { toast } from 'react-hot-toast';
 import { logAction } from '../services/auditService';
+import { logResolvedFailureActivity } from '../services/activityService';
 
 export function useTasks(userId: string | undefined, userDisplayName?: string | null) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -236,7 +237,6 @@ export function useTasks(userId: string | undefined, userDisplayName?: string | 
         // Log real-time activity for resolved failure/critical tasks
         if (task.priority === 'critical' || task.type === 'incidente') {
           try {
-            const { logResolvedFailureActivity } = await import('../services/activityService');
             // Calculate SLA time
             const slaMs = new Date().getTime() - new Date(task.createdAt).getTime();
             const hours = Math.floor(slaMs / 3600000);

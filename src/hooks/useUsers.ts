@@ -6,6 +6,7 @@ import { auth, db, firebaseConfig, handleFirestoreError, OperationType } from '.
 import { AppUser } from '../types';
 import { toast } from 'react-hot-toast';
 import { logAction } from '../services/auditService';
+import { logNewTeamMemberActivity } from '../services/activityService';
 
 interface CreateUserData {
   name: string;
@@ -68,7 +69,6 @@ export function useUsers() {
 
         // Log real-time activity
         try {
-          const { logNewTeamMemberActivity } = await import('../services/activityService');
           await logNewTeamMemberActivity(
             currentAdmin.displayName || currentAdmin.email || 'Admin',
             undefined,

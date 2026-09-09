@@ -656,8 +656,8 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             </div>
           </div>
 
-          <div className="h-[280px] w-full min-w-0">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <div className="h-[280px] w-full min-w-0" style={{ minHeight: '280px' }}>
+            <ResponsiveContainer width="100%" height={280} minWidth={0} minHeight={280}>
               <BarChart data={dailyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-main)" opacity={0.3} />
                 <XAxis 
@@ -692,8 +692,8 @@ export const DashboardView = React.memo(function DashboardView({ backups, client
             <p className="text-xs text-text-secondary mt-1">Divisão proporcional por status das rotinas de backup</p>
           </div>
           
-          <div className="h-[190px] w-full min-w-0 relative mt-2">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <div className="h-[190px] w-full min-w-0 relative mt-2" style={{ minHeight: '190px' }}>
+            <ResponsiveContainer width="100%" height={190} minWidth={0} minHeight={190}>
               <PieChart>
                 <Pie
                   data={total > 0 ? pieData : [{ name: 'Sem Dados', value: 1, color: '#334155' }]}
