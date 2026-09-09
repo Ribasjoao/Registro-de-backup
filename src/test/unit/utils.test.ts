@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { formatRelativeTime } from '../../components/TimelineView';
 import { getLevelForXP, awardXP, LEVEL_RANGES } from '../../lib/xpService';
+import { getStatusLabel, getTypeLabel, filterTasks, generateRecurrentTasks } from '../../lib/taskService';
+import { logAction } from '../../services/auditService';
 import { mockFirestoreFunctions } from '../mocks/firebaseMock';
+import { Task } from '../../types';
 
 // Mock firebase module for xpService tests
 vi.mock('../../firebase', () => ({
@@ -169,3 +172,115 @@ describe('3.1 Funções Utilitárias - Validação de Campos de Backup', () => {
     expect(res.error).toBeUndefined();
   });
 });
+
+describe('3.1 Funções Utilitárias - Task Service', () => {
+  it('deve retornar labels corretos de status e tipos de tarefa', () => {
+    expect(getStatusLabel('inbox')).toBe('Entrada');
+    expect(getStatusLabel('done')).toBe('Concluído');
+    expect(getStatusLabel('today')).toBe('Hoje');
+    expect(getStatusLabel('doing')).toBe('Em Andamento');
+    expect(getStatusLabel('unknown' as any)).toBe('unknown');
+
+    expect(getTypeLabel('rotina')).toBe('Rotina');
+    expect(getTypeLabel('incidente')).toBe('Incidente');
+    expect(getTypeLabel('plano_de_acao')).toBe('Plano de Ação');
+    expect(getTypeLabel('custom' as any)).toBe('custom');
+  });
+
+  it('deve filtrar tarefas corretamente de acordo com os filtros passados', () => {
+    const mockTasks: Task[] = [
+      {
+        id: '1',
+        title: 'Tarefa 1',
+        status: 'today',
+        type: 'rotina',
+        priority: 'high',
+        relatedClient: 'Cliente A',
+        createdAt: new Date().toISOString(),
+        completed: false,
+        source: 'manual',
+      },
+      {
+        id: '2',
+        title: 'Tarefa 2',
+        status: 'done',
+        type: 'incidente',
+        priority: 'critical',
+        relatedClient: 'Cliente B',
+        createdAt: new Date().toISOString(),
+        completed: true,
+        source: 'manual',
+      },
+      {
+        id: '3',
+        title: 'Tarefa 3',
+        status: 'doing',
+        type: 'rotina',
+        priority: 'low',
+        relatedClient: 'Cliente A',
+        createdAt: new Date().toISOString(),
+        completed: false,
+        source: 'manual',
+      },
+    ];
+
+    expect(filterTasks(mockTasks, { status: 'today' })).toHaveLength(1);
+    expect(filterTasks(mockTasks, { type: 'incidente' })).toHaveLength(1);
+    expect(filterTasks(mockTasks, { priority: 'critical' })).toHaveLength(1);
+    expect(filterTasks(mockTasks, { client: 'Cliente A' })).toHaveLength(2);
+    expect(filterTasks(mockTasks, { today: true })).toHaveLength(2); // today and doing
+    expect(filterTasks(mockTasks, {})).toHaveLength(3);
+  });
+
+  it('deve gerar tarefas recorrentes conforme a periodicidade configurada', () => {
+    const templates: Task[] = [
+      {
+        id: 't1',
+        title: 'Check Diário',
+        status: 'inbox',
+        type: 'rotina',
+        priority: 'medium',
+        createdAt: new Date().toISOString(),
+        completed: false,
+        source: 'manual',
+        recurrence: { type: 'daily', lastGenerated: '2020-01-01' },
+      },
+      {
+        id: 't2',
+        title: 'Check Já Gerado Hoje',
+        status: 'inbox',
+        type: 'rotina',
+        priority: 'medium',
+        createdAt: new Date().toISOString(),
+        completed: false,
+        source: 'manual',
+        recurrence: { type: 'daily', lastGenerated: new Date().toISOString().split('T')[0] },
+      },
+    ];
+
+    const generated = generateRecurrentTasks(templates, 'user-1');
+    expect(generated.length).toBeGreaterThanOrEqual(1);
+    expect(generated[0].title).toBe('Check Diário');
+    expect(generated[0].status).toBe('today');
+    expect(generated[0].source).toBe('recurrent');
+  });
+});
+
+describe('3.1 Funções Utilitárias - Audit Service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('não deve fazer nada se userId estiver vazio', async () => {
+    const addDocSpy = vi.spyOn(mockFirestoreFunctions, 'addDoc');
+    await logAction('', 'Admin', 'TEST', 'Detalhes');
+    expect(addDocSpy).not.toHaveBeenCalled();
+  });
+
+  it('deve gravar log de auditoria com sucesso no Firestore', async () => {
+    const addDocSpy = vi.spyOn(mockFirestoreFunctions, 'addDoc');
+    await logAction('user-123', 'Operador Backup', 'CREATE_BACKUP', 'Criou backup Veeam');
+    expect(addDocSpy).toHaveBeenCalled();
+  });
+});
+
