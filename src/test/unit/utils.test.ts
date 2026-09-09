@@ -199,6 +199,8 @@ describe('3.1 Funções Utilitárias - Task Service', () => {
         createdAt: new Date().toISOString(),
         completed: false,
         source: 'manual',
+        userId: 'user-1',
+        owner: 'Operador',
       },
       {
         id: '2',
@@ -210,6 +212,8 @@ describe('3.1 Funções Utilitárias - Task Service', () => {
         createdAt: new Date().toISOString(),
         completed: true,
         source: 'manual',
+        userId: 'user-1',
+        owner: 'Operador',
       },
       {
         id: '3',
@@ -221,6 +225,8 @@ describe('3.1 Funções Utilitárias - Task Service', () => {
         createdAt: new Date().toISOString(),
         completed: false,
         source: 'manual',
+        userId: 'user-1',
+        owner: 'Operador',
       },
     ];
 
@@ -244,6 +250,8 @@ describe('3.1 Funções Utilitárias - Task Service', () => {
         completed: false,
         source: 'manual',
         recurrence: { type: 'daily', lastGenerated: '2020-01-01' },
+        userId: 'user-1',
+        owner: 'Operador',
       },
       {
         id: 't2',
@@ -255,6 +263,8 @@ describe('3.1 Funções Utilitárias - Task Service', () => {
         completed: false,
         source: 'manual',
         recurrence: { type: 'daily', lastGenerated: new Date().toISOString().split('T')[0] },
+        userId: 'user-1',
+        owner: 'Operador',
       },
     ];
 
