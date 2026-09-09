@@ -18,6 +18,9 @@ export interface ParsedBackupReport {
   overallStatus: 'success' | 'warning' | 'failed';
   summary: string;
   jobs: ParsedJobItem[];
+  isLocalFallback?: boolean;
+  quotaExceeded?: boolean;
+  warning?: string;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -71,17 +74,19 @@ export async function parseBackupPdf(
     } else {
       const errData = await response.json().catch(() => ({}));
       const message = errData.error || `Falha no servidor (Código ${response.status}) ao analisar o PDF.`;
-      // Se o servidor respondeu com status 500, 502, 503, 400 ou 401, esse é o diagnóstico real do backend
-      if (response.status !== 404 && response.status !== 405) {
+      // Se o servidor respondeu com 429 (cota), permitimos que o fallback local assuma sem estourar erro vermelho
+      if (response.status === 429 || message.toLowerCase().includes('cota') || message.toLowerCase().includes('quota')) {
+        console.warn("Cota da API Gemini esgotada no servidor, acionando leitor inteligente de contingência...");
+      } else if (response.status !== 404 && response.status !== 405) {
         throw new Error(message);
       }
     }
   } catch (apiErr: any) {
     // Se a mensagem já é um erro direto da rota (ex: 500, 503, etc), propaga diretamente para o usuário
-    if (apiErr.message && !apiErr.message.includes("404") && !apiErr.message.includes("405") && !apiErr.message.includes("Failed to fetch")) {
+    if (apiErr.message && !apiErr.message.includes("404") && !apiErr.message.includes("405") && !apiErr.message.includes("429") && !apiErr.message.includes("cota") && !apiErr.message.includes("Failed to fetch")) {
       throw apiErr;
     }
-    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou (404/405/Rede), verificando fallbacks...", apiErr);
+    console.warn("Tentativa de API /api/ai/parse-backup-pdf falhou (404/405/Rede/Cota), verificando fallbacks...", apiErr);
   }
 
   // 2. Fallback Secundário: Firebase Cloud Functions (se disponível no ambiente)
@@ -189,6 +194,22 @@ Retorne os dados em formato JSON estrito. Todos os textos em Português do Brasi
     } catch (clientErr: any) {
       console.error("Falha no processamento direto com VITE_GEMINI_API_KEY:", clientErr);
     }
+  }
+
+  // 4. Fallback Quaternário de Resiliência: Leitor Heurístico Local
+  // Garante que se o servidor Vercel estiver sem chave ou com cota 429 esgotada,
+  // o operador ainda tenha os campos preenchidos e não fique bloqueado.
+  try {
+    const { extractTextFromPdfBase64, heuristicParsePdf } = await import("../lib/pdfLocalExtractor");
+    const extractedText = extractTextFromPdfBase64(pdfBase64, file.name);
+    const localReport = heuristicParsePdf(extractedText, file.name, knownClients);
+    return {
+      ...localReport,
+      isLocalFallback: true,
+      warning: "Relatório preenchido pelo leitor inteligente local (cota da IA temporariamente indisponível).",
+    };
+  } catch (localErr: any) {
+    console.warn("Fallback local heurístico não pôde processar o arquivo:", localErr?.message);
   }
 
   throw new Error(

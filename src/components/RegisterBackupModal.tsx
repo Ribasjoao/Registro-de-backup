@@ -87,6 +87,8 @@ export function RegisterBackupModal({
     summary: string;
     totalJobs: number;
     failedJobs: number;
+    isLocalFallback?: boolean;
+    warning?: string;
   } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAiImported, setIsAiImported] = useState(false);
@@ -290,10 +292,19 @@ export function RegisterBackupModal({
         filename: file.name,
         summary: parsed.summary || 'Relatório processado e campos preenchidos com sucesso.',
         totalJobs: newJobs.length,
-        failedJobs: newJobs.filter(j => j.status === 'failed' || j.status === 'warning').length
+        failedJobs: newJobs.filter(j => j.status === 'failed' || j.status === 'warning').length,
+        isLocalFallback: parsed.isLocalFallback,
+        warning: parsed.warning,
       });
 
-      toast.success('Relatório PDF lido com sucesso pelo Gemini!', { id: loadingToast });
+      if (parsed.isLocalFallback) {
+        toast.success(
+          parsed.warning || 'Relatório PDF processado pelo leitor local inteligente (cota de IA temporariamente atingida). Campos preenchidos com sucesso!',
+          { id: loadingToast, duration: 6000, icon: '📄' }
+        );
+      } else {
+        toast.success('Relatório PDF lido com sucesso pelo Gemini!', { id: loadingToast });
+      }
     } catch (err: any) {
       console.error('Erro na análise de PDF:', err);
       let errMsg = err?.message || 'Erro desconhecido';
@@ -504,6 +515,15 @@ export function RegisterBackupModal({
                     <span className="text-[9px] font-black uppercase tracking-wider bg-bg-main text-text-secondary px-2 py-0.5 rounded border border-border-main/40">
                       {aiImportInfo.totalJobs} jobs identificados ({aiImportInfo.failedJobs} com ocorrência{aiImportInfo.failedJobs !== 1 ? 's' : ''})
                     </span>
+                    {aiImportInfo.isLocalFallback ? (
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/30">
+                        Leitor Inteligente Local
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded border border-purple-500/30">
+                        Gemini IA
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"

@@ -71,6 +71,27 @@ describe('Gemini Service - Leitura e Diagnóstico de PDF', () => {
     expect(result.jobs[1].technicalAnalysis).toContain('0x80070070');
   });
 
+  it('deve assumir fallback local inteligente se o servidor responder com status 429 (cota esgotada)', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({
+        error: 'Limite de requisições por minuto da cota gratuita atingido. Aguarde cerca de 10 a 15 segundos e tente novamente.'
+      })
+    } as any);
+
+    const dummyBlob = new Blob(['Job: Backup VM-SQL Status: FAILED Disk full error on repository'], { type: 'application/pdf' });
+    const dummyFile = new File([dummyBlob], 'Relatorio_Clinica_Alfa_Falha.pdf', { type: 'application/pdf' });
+
+    const result = await parseBackupPdf(dummyFile, ['Clinica Alfa', 'Hospital São Lucas']);
+
+    expect(result).toBeDefined();
+    expect(result.clientName).toBe('Clinica Alfa');
+    expect(result.isLocalFallback).toBe(true);
+    expect(result.overallStatus).toBe('failed');
+    expect(result.jobs.length).toBeGreaterThan(0);
+  });
+
   it('deve lançar erro amigável se a resposta do servidor retornar erro 500', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
